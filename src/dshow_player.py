@@ -688,7 +688,8 @@ class Player():
     # fail silently?
     ########################################
     def set_fullscreen(self, flag: bool):
-
+        if self._fullscreen == flag:
+            return
         if USE_MPC_RENDERER:
             if flag:
                 self._rc_parent = RECT()

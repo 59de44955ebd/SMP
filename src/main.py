@@ -1406,6 +1406,7 @@ class App(MainWin):
         if self.stayontop:
             self.set_stayontop(not fullscreen)
         self.mediaplayer.set_fullscreen(fullscreen)
+        user32.ShowCursor(int(not fullscreen))
 
     ########################################
     #
@@ -1414,6 +1415,7 @@ class App(MainWin):
         if self.media_file is None or not self.mediaplayer.has_video():
             return
         self.mediaplayer.set_fullscreen(False)
+        user32.ShowCursor(TRUE)
 
     ########################################
     #
