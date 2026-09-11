@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Player</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+}
+html {
+    height: 100%;
+}
+body {
+    height: 100%;
+    overflow: hidden;
+}
+video {
+    width: 100vw;
+    height: 100vh;
+    margin: auto;
+}
+video::cue {
+	background: none;
+	font-family: arial;
+	font-size: 20px !important;
+    text-shadow:  1px  1px 2px black,
+                  1px -1px 2px black,
+                 -1px  1px 2px black,
+                 -1px -1px 2px black;
+	-webkit-font-smoothing: antialiased;
+}
+.ratio {
+	object-fit: fill;
+	width: 100vw;
+	height: calc(var(--ay) / var(--ax) * 100vw);
+	max-height: 100vh;
+	max-width: calc(var(--ax) / var(--ay) * 100vh);
+	margin: auto;
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+}
+.ratio_none {
+	object-fit: fill;
+}
+</style>
+</head>
+<body>
+<video preload="auto"></video>
+<script type="module">
+import { fetchTrack, transformSrtTracks, srt2vtt } from './srt.js';
+import { Sequencer, WorkletSynthesizer } from "./spessasynth_lib.js";
+
+let is_midi = false;
+let interval_id = null;
+let media_loaded = false;
+
+const video = document.querySelector('video');
+
+//video.onloadedmetadata = function(e){
+//	chrome.webview.api.on_parsed(video.videoWidth, video.videoHeight, video.duration, video.webkitAudioDecodedByteCount != 0);
+//}
+
+video.onloadeddata = function(e){
+	chrome.webview.api.on_parsed(true, video.videoWidth, video.videoHeight, video.duration, video.webkitAudioDecodedByteCount != 0);
+	media_loaded = true;
+	video.onerror = null;
+}
+
+const _onerror = function(e){
+//	if (video.error instanceof MediaError)
+	chrome.webview.api.on_parsed(false, 0, 0, 0, false);
+	video.onerror = null;
+}
+
+video.onresize = function(e){
+	if (media_loaded)
+		chrome.webview.api.on_parsed(true, video.videoWidth, video.videoHeight, video.duration, video.webkitAudioDecodedByteCount != 0);
+}
+
+video.ontimeupdate = function(){
+	chrome.webview.api.on_time_update(video.currentTime);
+}
+
+//player.onended = function(){
+//	console.log('END');
+//	//chrome.webview.api.on_time_update(player.currentTime);
+//}
+
+video.onpause = function(){
+	chrome.webview.api.on_state_change(0);
+}
+
+video.onplay = function(){
+	chrome.webview.api.on_state_change(1);
+}
+
+document.body.onmousedown = (e) => {
+	if (e.button == 0)
+		chrome.webview.api.on_mousedown(false);
+	else if (e.button == 2)
+		chrome.webview.api.on_mousedown(true);
+}
+
+// Load the sound bank (your path may vary)
+const response = await fetch("soundbank.sf2");
+
+// Load the sound bank into an array buffer
+const sf_data = await response.arrayBuffer();
+
+// Create an audioContext and add the worklet
+const context = new AudioContext();
+
+await context.audioWorklet.addModule("./spessasynth_processor.min.js");
+
+// Create the synthesizer
+const synth = new WorkletSynthesizer(context);
+
+//synth.connect(context.destination);
+
+const gain_node = context.createGain();
+gain_node.connect(context.destination);
+synth.connect(gain_node);
+
+// Add the sound bank
+await synth.soundBankManager.addSoundBank(sf_data, "main");
+
+// Create the sequencer
+const seq = new Sequencer(synth);
+//console.log(seq);
+
+//alert(window.midi_volume);
+gain_node.gain.value = 1;
+
+const timer_start = () => {
+	interval_id = window.setInterval(() => chrome.webview.api.on_time_update(seq.currentTime), 500);
+}
+
+const timer_stop = () => {
+	if (interval_id)
+	{
+		window.clearInterval(interval_id);
+		interval_id = null;
+	}
+}
+
+const player = {};
+
+player.load = (uri, src_is_midi)  => {
+	is_midi = src_is_midi;
+	if (src_is_midi)
+	{
+		fetch(uri)
+		.then(res => res.arrayBuffer())
+		.then(midi_data => seq.loadNewSongList([{ binary: midi_data }]));
+	}
+	else
+	{
+		media_loaded = false;
+		video.onerror = _onerror;
+		video.src = uri;
+	}
+}
+
+// load_srt("file:///D:/test/test.srt")
+player.load_subs = (subs_url) => {
+	video.innerHTML = '';
+	if (subs_url.toLowerCase().endsWith('.srt'))
+		fetchTrack(subs_url).then(content => {
+			const blob = new Blob([srt2vtt(content)], {type: 'text/vtt'});
+
+			const track = document.createElement('track');
+			track.kind = 'subtitles';
+	//		track.label = subtitle.dataset.label;
+	//		track.srclang = subtitle.dataset.lang;
+			track.default = true;
+			track.src = URL.createObjectURL(blob);
+			video.appendChild(track);
+
+	//		const track = player.addTextTrack("subtitles");
+	//		track.src = URL.createObjectURL(blob);
+	//		track.default = true;
+	//		track.mode = "showing";
+		});
+	else
+	{
+		const track = document.createElement('track');
+		track.kind = 'subtitles';
+//		track.label = subtitle.dataset.label;
+//		track.srclang = subtitle.dataset.lang;
+		track.default = true;
+		track.src = subs_url;
+		video.appendChild(track);
+	}
+}
+
+player.hide_subs = (flag) => {
+	video.textTracks[0].mode = flag ? 'disabled': 'showing';
+}
+
+player.close = ()  => {
+	if (is_midi)
+	{
+		timer_stop();
+		seq.pause();
+		seq.currentTime = 0;
+	}
+	else
+	{
+		video.innerHTML = '';
+		video.src = '';
+	}
+}
+
+player.play = ()  => {
+	if (is_midi)
+	{
+		seq.play();
+		chrome.webview.api.on_state_change(1);
+		timer_start();
+	}
+	else
+		video.play();
+}
+
+player.pause = ()  => {
+	if (is_midi)
+	{
+		timer_stop();
+		seq.pause();
+		chrome.webview.api.on_state_change(0);
+	}
+	else
+	{
+		video.pause();
+
+		if (video.duration == 0)
+			video.currentTime = 0;
+	}
+}
+
+player.stop = ()  => {
+	if (is_midi)
+	{
+		timer_stop();
+		seq.pause();
+		seq.currentTime = 0;
+		chrome.webview.api.on_state_change(0);
+	}
+	else
+	{
+		video.pause();
+		video.currentTime = 0;
+	}
+}
+
+player.set_volume = (v) => {
+	video.volume = v;
+	gain_node.gain.value = v;
+}
+
+player.set_time = (sec) => {
+	if (is_midi)
+	{
+		timer_stop();
+		seq.currentTime = sec;
+		chrome.webview.api.on_time_update(sec);
+		timer_start();
+	}
+	else
+		video.currentTime = sec ;
+}
+
+player.set_loop = (flag) => {
+	video.loop = flag;
+	seq.loopCount = flag ? Infinity : 0;
+}
+
+seq.eventHandler.addEvent("songChange", "my-listener", () => {
+    chrome.webview.api.on_parsed(true, 0, 0, seq.duration, true);
+});
+
+seq.eventHandler.addEvent("songEnded", "my-listener", () => {
+	timer_stop();
+	chrome.webview.api.on_state_change(0);
+    chrome.webview.api.on_time_update(0);
+});
+
+player.set_brightness = (value) => {
+	let flt = video.style.filter;
+	const reg = /brightness\(\d*\%\)/;
+	flt = flt.replace(reg, '');
+	video.style.filter = value == 100 ? flt : `${flt} brightness(${value}%)`;
+}
+
+player.set_contrast = (value) => {
+	let flt = video.style.filter;
+	const reg = /contrast\(\d*\%\)/;
+	flt = flt.replace(reg, '');
+	video.style.filter = value == 100 ? flt : `${flt} contrast(${value}%)`;
+}
+
+player.set_saturation = (value) => {
+	let flt = video.style.filter;
+	const reg = /saturate\(\d*\%\)/;
+	flt = flt.replace(reg, '');
+	video.style.filter = value == 100 ? flt : `${flt} saturate(${value}%)`;
+}
+
+// value must pe postive, so we use 360 as neutral
+player.set_hue = (value) => {
+	let flt = video.style.filter;
+	const reg = /hue-rotate\(\d*deg\)/;
+	flt = flt.replace(reg, '');
+	video.style.filter = value == 360 ? flt : `${flt} hue-rotate(${value}deg)`;
+}
+
+player.set_aspect_ratio = (ax, ay) => {
+	if (ax)
+	{
+		document.documentElement.style.setProperty('--ax', ax);
+		document.documentElement.style.setProperty('--ay', ay);
+		video.className = 'ratio';
+	}
+	else if (ax === 0)
+		video.className = 'ratio_none';
+	else
+		video.className = '';
+}
+
+player.get_video_image = () => {
+    const canvas = document.createElement('canvas');
+    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL();
+}
+
+window.player = player;
+
+window.video = video;
+window.seq = seq;
+
+chrome.webview.api.on_initialized();
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+#include "windows.h"
+#include "resources.h"
+
+1 MENU
+BEGIN
+  POPUP "&File"
+  BEGIN
+    MENUITEM "&Open File...\tCtrl+O",IDM_OPEN_FILE
+    MENUITEM "Open &URL...\tCtrl+U",IDM_OPEN_URL
+    MENUITEM "&Close\tCtrl+W",IDM_CLOSE
+    MENUITEM SEPARATOR
+    MENUITEM "Show &Media Infos\tI",IDM_SHOW_MEDIAINFOS
+    MENUITEM "Open File &Location\tE",IDM_OPEN_LOCATION
+    MENUITEM SEPARATOR
+    MENUITEM "&Quit\tCtrl+Q",IDM_EXIT
+  END
+
+  POPUP "&Playback"
+  BEGIN
+    MENUITEM "&Play/Pause\tSpace",IDM_PLAY_PAUSE
+    MENUITEM "St&op\tPeriod",IDM_STOP
+    MENUITEM "&Rewind\tR",IDM_REWIND
+    MENUITEM "&Loop\tL",IDM_LOOP
+    MENUITEM SEPARATOR
+    MENUITEM "Pre&vious\tPgUp",IDM_PLAY_PREVIOUS
+    MENUITEM "Ne&xt\tPgDn",IDM_PLAY_NEXT
+    MENUITEM SEPARATOR
+    MENUITEM "Skip &Back\tLeft",IDM_SKIP_BACK
+    MENUITEM "Skip &Forward\tRight",IDM_SKIP_FORWARD
+    MENUITEM SEPARATOR
+    MENUITEM "&Step Back\tShift+Left",IDM_STEP_BACK
+    MENUITEM "S&tep Forward\tShift+Right",IDM_STEP_FORWARD
+  END
+
+  POPUP "&Audio"
+  BEGIN
+    MENUITEM "Volume &Up\tUp",IDM_VOLUME_UP
+    MENUITEM "Volume &Down\tDown",IDM_VOLUME_DOWN
+    MENUITEM "&Mute\tM",IDM_MUTE
+  END
+
+  POPUP "&Video"
+  BEGIN
+    POPUP "&Zoom"
+    BEGIN
+      MENUITEM "50%\t0",IDM_ZOOM_50
+      MENUITEM "100%\t1",IDM_ZOOM_100
+      MENUITEM "200%\t2",IDM_ZOOM_200
+    END
+    POPUP "&Aspect Ratio"
+    BEGIN
+      MENUITEM "Default (DAR)",IDM_RATIO_DEFAULT,CHECKED
+      MENUITEM "4:3",IDM_RATIO_4_3
+      MENUITEM "5:4",IDM_RATIO_5_4
+      MENUITEM "16:9",IDM_RATIO_16_9
+      MENUITEM "16:10",IDM_RATIO_16_10
+      MENUITEM "235:100",IDM_RATIO_235_100
+      MENUITEM "185:100",IDM_RATIO_185_100
+      MENUITEM "None (Stretch to Window)",IDM_RATIO_NONE
+    END
+    MENUITEM "&Color Controls...\tC",IDM_COLOR_CONTROLS
+    MENUITEM "Take &Snapshot\tCtrl+S",IDM_SNAPSHOT
+  END
+
+  POPUP "&Subtitle"
+  BEGIN
+    MENUITEM "Load &Subtitles...\tCtrl+B",IDM_LOAD_SUBS
+  END
+
+  POPUP "&View"
+  BEGIN
+    POPUP "&Theme"
+    BEGIN
+      MENUITEM "&Auto (System)", IDM_THEME_AUTO
+      MENUITEM "&Light", IDM_THEME_LIGHT
+      MENUITEM "&Dark", IDM_THEME_DARK
+    END
+    MENUITEM SEPARATOR
+    MENUITEM "&Fullscreen\tF11",IDM_FULLSCREEN
+    MENUITEM "M&inimal Interface\tCtrl+H",IDM_INTERFACE_MIN
+    MENUITEM "F&ull Interface\tCtrl+I",IDM_INTERFACE_FULL
+    MENUITEM SEPARATOR
+    MENUITEM "Show &Menu Bar",IDM_SHOW_MENU,CHECKED
+    MENUITEM "Show &Seek Bar",IDM_SHOW_SEEK,CHECKED
+    MENUITEM "Show &Controls",IDM_SHOW_CONTROLS,CHECKED
+    MENUITEM "Show Status &Bar",IDM_SHOW_STATUS,CHECKED
+    MENUITEM SEPARATOR
+    MENUITEM "Show &Playlist\tP",IDM_SHOW_PLAYLIST
+  END
+
+  POPUP "&Options"
+  BEGIN
+    POPUP "&Media Engine"
+    BEGIN
+      MENUITEM "&DirectShow",IDM_ENGINE_DIRECTSHOW
+      MENUITEM "&VLC",IDM_ENGINE_VLC
+      MENUITEM "&WebView",IDM_ENGINE_WEBVIEW
+    END
+    MENUITEM SEPARATOR
+    MENUITEM "Stay on &Top\tT",IDM_STAY_ON_TOP
+    MENUITEM "Minimize to &Tray",IDM_MINIMIZE_TO_TRAY
+    MENUITEM "&Auto-Resize Window to Video",IDM_AUTO_RESIZE_TO_VIDEO
+    MENUITEM "&Single Instance",IDM_SINGLE_INSTANCE
+    MENUITEM "&Remember last Playlist",IDM_REMEMBER_PLAYLIST
+    MENUITEM "Show &Media Title in Title Bar",IDM_USE_META_TITLE
+  END
+
+  POPUP "&Help"
+  BEGIN
+    MENUITEM "&About\tF1",IDM_ABOUT
+    MENUITEM SEPARATOR
+    MENUITEM "&Check for Updates", IDM_UPDATE_APP
+  END
+END
