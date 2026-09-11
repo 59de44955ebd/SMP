@@ -1137,7 +1137,7 @@ class App(MainWin):
                 mh = cast(lparam, POINTER(NMHDR)).contents
                 msg = mh.code
                 if msg == NM_CLICK:
-                    shell32.ShellExecuteW(None, None, 'https://github.com/59de44955ebd/SMP/releases', None, None, SW_SHOWNORMAL)
+                    shell32.ShellExecuteW(None, None, 'https://github.com/59de44955ebd/SMP', None, None, SW_SHOWNORMAL)
 
             elif self.is_dark:
                 if msg == WM_CTLCOLORDLG:

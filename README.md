@@ -28,6 +28,8 @@ MIDI support depends on an external [SoundFont](https://en.wikipedia.org/wiki/So
 
 WebView playback is based on [Microsoft Edge WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2) (based on recent Chrome/Chromium versions) which comes preinstalled with Windows 11.
 
-MIDI support is based on the same `soundbank.sf2` as the VLC engine, so replacing this file would also increase the MIDI sound quality of the WebView engine.
+MIDI support is based on [spessasynth_lib](https://github.com/spessasus/spessasynth_lib). It uses the same `soundbank.sf2` as the VLC engine, so replacing this file would also increase the MIDI sound quality of the WebView engine.
 
 WebView supports less features, container formats and codecs than DirectShow and VLC, but has the benefit of minimum extra file size, since WebView2 is already provides by the OS. If you only need support for common media formats/codecs, you could remove DirectShow support by deleting the `filters` folder (inside `data`), resulting in a media player with rather small file size.
+
+If you are a MIDI nerd, WebView is the only engine that supports the rather exotic but interesting [SF2 RMIDI](https://github.com/spessasus/sf2-rmidi-specification) file format that allows to combine MIDI and soundbank data in a single `.rmi` file.
