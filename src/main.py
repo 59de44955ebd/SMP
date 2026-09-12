@@ -633,7 +633,7 @@ class App(MainWin):
 
         self.ui_height = rc_win.bottom - rc_win.top - rc_win_client.bottom  # title bar, menu, window frame
         if self.show_seek:
-            self.ui_height += self.slider_seek.height
+            self.ui_height += (self.slider_seek.height + 6)
         if self.show_controls:
             self.ui_height += self.toolbar.height
         if self.show_status:
@@ -906,7 +906,7 @@ class App(MainWin):
                 height -= self.toolbar.height
 
             if self.slider_seek.visible:
-                height -= self.slider_seek.height
+                height -= (self.slider_seek.height + 6)
 
             self.video_container.set_window_pos(
                 width = width - self.pane.splitter.pos, height = height,
@@ -929,6 +929,7 @@ class App(MainWin):
             user32.CheckMenuItem(self.h_menu, IDM_SHOW_PLAYLIST, MF_BYCOMMAND | MF_UNCHECKED)
             self.pane.show(SW_HIDE)
             self.update_layout()
+            self.update_min_size()
 
         self.pane.connect(EVENT_PANE_CLOSE_REQUESTED, _on_pane_closed)
 
