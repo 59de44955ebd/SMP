@@ -51,8 +51,11 @@ class Player():
         self._height = height
         self._loop = False
 
-        self._keepaspectratio = True
-        self._ratio = None
+        self._use_ratio = True
+        self._forced_ratio = None
+
+        self._ratio_org_mpc = None
+        self._ratio_mpc = None
 
         self._frame_step = 0
 
@@ -497,16 +500,10 @@ class Player():
 
                 if USE_MPC_RENDERER:
                     w, h = self._basic_video.GetPreferredAspectRatio()
-                    self._ratio_org = w / h
-
-                    if not self._ratio and self._keepaspectratio:
-                        self._ratio = self._ratio_org
-
+                    self._ratio_org_mpc = w / h
+                    self._ratio_mpc = self._forced_ratio or self._ratio_org_mpc
                 else:
-                    if self._ratio:
-                        self._set_keepaspectratio(False)
-
-                self._resize(self._width, self._height)
+                    self._set_keepaspectratio(self._use_ratio and not self._forced_ratio)
 
                 for k, value in self._image_values.items():
                     if value != 0:
@@ -538,23 +535,39 @@ class Player():
         self._width, self._height = w, h
         if not self._has_video:
             return
-        if self._ratio:
-            if h > 0 and (w / h) > self._ratio:
-                cy = h
-                cx = int(h * self._ratio)
-                x = (w - cx) // 2
-                y = 0
-            else:
-                cx = w
-                cy = int(w / self._ratio)
-                x = 0
-                y = (h - cy) // 2
+        if USE_MPC_RENDERER:
+            if self._use_ratio:
+                if h > 0 and (w / h) > self._ratio_mpc:
+                    cy = h
+                    cx = int(h * self._ratio_mpc)
+                    x = (w - cx) // 2
+                    y = 0
+                else:
+                    cx = w
+                    cy = int(w / self._ratio_mpc)
+                    x = 0
+                    y = (h - cy) // 2
 
-            self._video_window.SetWindowPosition(0, 0, w, h)
-            self._basic_video.SetDestinationPosition(x, y, cx, cy)
+                self._video_window.SetWindowPosition(0, 0, w, h)
+                self._basic_video.SetDestinationPosition(x, y, cx, cy)
+            else:
+                self._video_window.SetWindowPosition(0, 0, w, h)
+                self._basic_video.SetDestinationPosition(0, 0, w, h)
         else:
-            self._video_window.SetWindowPosition(0, 0, w, h)
-            self._basic_video.SetDestinationPosition(0, 0, w, h)
+            if self._forced_ratio:
+                if (w / h) > self._forced_ratio:
+                    cy = h
+                    cx = int(h * self._forced_ratio)
+                    x = (w - cx) // 2
+                    y = 0
+                else:
+                    cx = w
+                    cy = int(w / self._forced_ratio)
+                    x = 0
+                    y = (h - cy) // 2
+                self._video_window.SetWindowPosition(x, y, cx, cy)
+            else:
+                self._video_window.SetWindowPosition(0, 0, w, h)
 
     ########################################
     #
@@ -613,10 +626,8 @@ class Player():
             return
         t = max(0, self._media_seeking.GetCurrentPosition() - frames * self._frame_step)
         self._media_seeking.SetPositions(
-            t,
-            AM_SEEKING_AbsolutePositioning,
-            0,
-            AM_SEEKING_NoPositioning
+            t, AM_SEEKING_AbsolutePositioning,
+            0, AM_SEEKING_NoPositioning
         )
 
     ########################################
@@ -625,46 +636,27 @@ class Player():
     def step_forward(self, frames = 1):
         if self._media_seeking is None or self._frame_step == 0:
             return
-
         t = self._media_seeking.GetCurrentPosition() + int(frames * self._frame_step)
         if self._duration:
             t = min(self._duration, t)
-
         self._media_seeking.SetPositions(
-            t, #self._media_seeking.GetCurrentPosition() + int(frames * self._frame_step),
-            AM_SEEKING_AbsolutePositioning,
-            0,
-            AM_SEEKING_NoPositioning
+            t, AM_SEEKING_AbsolutePositioning,
+            0, AM_SEEKING_NoPositioning
         )
 
     ########################################
-    # returns seconds as float
+    #
     ########################################
     def get_duration(self) -> float:
         return self._duration / 10000000.0
-#        if self._media_seeking is None:
-#            return 0
-#        try:
-#            return self._media_seeking.getDuration() / 10000000.0
-#        except:
-#            return 0
 
     ########################################
     #
     ########################################
     def get_size(self) -> tuple:
-        if not self._has_video: #self._basic_video is None:
+        if not self._has_video:
             raise Exception('E_NOINTERFACE')
         return self._basic_video.GetVideoSize()
-
-    ########################################
-    #
-    ########################################
-#    def get_fps(self):
-#        if self._has_video:
-#            return 10000000 / self._frame_step if self._frame_step > 0 else 0
-#        else:
-#            return 0
 
     ########################################
     #
@@ -680,13 +672,10 @@ class Player():
     def set_time(self, secs: float):
         if self._media_seeking is None:
             raise Exception('E_NOINTERFACE')
-        hr, stop_time = self._media_seeking.SetPositions(
-            int(secs * 10000000),
-            AM_SEEKING_AbsolutePositioning,
-            0,
-            AM_SEEKING_NoPositioning
+        self._media_seeking.SetPositions(
+            int(secs * 10000000), AM_SEEKING_AbsolutePositioning,
+            0,AM_SEEKING_NoPositioning
         )
-        return SUCCEEDED(hr)
 
     ########################################
     #
@@ -695,10 +684,8 @@ class Player():
         if self._media_seeking is None:
             raise Exception('E_NOINTERFACE')
         self._media_seeking.SetPositions(
-            self._media_seeking.GetCurrentPosition(),
-            AM_SEEKING_AbsolutePositioning,
-            0,
-            AM_SEEKING_NoPositioning
+            self._media_seeking.GetCurrentPosition(), AM_SEEKING_AbsolutePositioning,
+            0, AM_SEEKING_NoPositioning
         )
 
     ########################################
@@ -737,9 +724,6 @@ class Player():
     #
     ########################################
     def is_fullscreen(self) -> bool:
-#       if self._video_window is None:
-#            raise Exception('E_NOINTERFACE')
-#       return self._video_window.FullScreenMode == -1
        return self._fullscreen
 
     ########################################
@@ -874,7 +858,6 @@ class Player():
     def _adjust_image(self, k, value):
         self._image_values[k] = value
         if self._filter_graph is None or self._mixer_control is None:
-#            raise Exception('E_NOINTERFACE')
             return
 
         if self._mixer_ranges is None:
@@ -902,8 +885,6 @@ class Player():
     #
     ########################################
     def _set_keepaspectratio(self, flag = True):
-        self._keepaspectratio = flag
-
         if self._vmr_aspect_control:
             return SUCCEEDED(self._vmr_aspect_control.SetAspectRatioMode(
                 VMR_ARMODE_LETTER_BOX if flag else VMR_ARMODE_NONE
@@ -913,22 +894,25 @@ class Player():
     # e.g. '4:3', '' to reset to default, None means resize to window
     ########################################
     def set_aspect_ratio(self, ratio):
-        if ratio:
-            w, h = ratio.split(':')
-            self._ratio = int(w) / int(h)
+        self._use_ratio = ratio is not None
+        if self._use_ratio:
+            if ratio:
+                w, h = ratio.split(':')
+                self._forced_ratio = int(w) / int(h)
+                if USE_MPC_RENDERER:
+                    self._ratio_mpc = self._forced_ratio
+                else:
+                    self._set_keepaspectratio(False)
+            elif ratio == '':
+                self._forced_ratio = None
+                if USE_MPC_RENDERER:
+                    self._ratio_mpc = self._ratio_org_mpc
+                else:
+                    self._set_keepaspectratio(True)
+        else:
+            self._forced_ratio = None
             if not USE_MPC_RENDERER:
                 self._set_keepaspectratio(False)
-
-        elif ratio == '':
-            if USE_MPC_RENDERER:
-                self._ratio = self._ratio_org
-            else:
-                self._ratio = None
-            self._set_keepaspectratio(True)
-
-        else:
-            self._ratio = None
-            self._set_keepaspectratio(False)
 
         self._resize(self._width, self._height)
 

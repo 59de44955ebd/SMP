@@ -1,5 +1,7 @@
 ﻿from winapp.window import *
 from winapp.themes import *
+from winapp.controls_themed.tooltips import *
+
 
 EVENT_POS_CHANGED = 1
 
@@ -17,7 +19,7 @@ _windowproc = WNDPROC(user32.DefWindowProcW)
 ########################################
 #
 ########################################
-class MySlider(Window, FocusHandler):
+class MySlider(Window):
 
     ########################################
     #
@@ -31,6 +33,7 @@ class MySlider(Window, FocusHandler):
         initial_pos = 0,
         show_knob = False,
         show_text = False,
+        show_tooltip = False,
         bg_brush = COLOR_3DFACE + 1,
         bg_brush_dark = gdi32.CreateSolidBrush(0x171717),
     ):
@@ -39,6 +42,8 @@ class MySlider(Window, FocusHandler):
         self.pos = initial_pos
         self.width = width
         self.height = height
+
+        self.is_down = False
 
         self.show_knob = show_knob
         self.show_text = show_text
@@ -92,7 +97,7 @@ class MySlider(Window, FocusHandler):
         #
         ########################################
         def _on_WM_MOUSEMOVE(hwnd, wparam, lparam):
-            self.pos = max(0, min(1, min(self.width - 1, max(0, GET_X_LPARAM(lparam))) / (self.width - 1)))
+            self.pos = max(0, min(1, GET_X_LPARAM(lparam) / (self.width - 1)))
             user32.InvalidateRect(self.hwnd, None, TRUE)
             self.emit(EVENT_POS_CHANGED, self.pos)
 
@@ -100,6 +105,7 @@ class MySlider(Window, FocusHandler):
         #
         ########################################
         def _on_WM_LBUTTONDOWN(hwnd, wparam, lparam):
+            self.is_down = True
             self.pos = GET_X_LPARAM(lparam) / (self.width - 1)
             user32.InvalidateRect(hwnd, None, TRUE)
             self.emit(EVENT_POS_CHANGED, self.pos)
@@ -110,6 +116,7 @@ class MySlider(Window, FocusHandler):
         #
         ########################################
         def _on_WM_LBUTTONUP(hwnd, wparam, lparam):
+            self.is_down = False
             user32.ReleaseCapture()
             self.unregister_message_callback(WM_MOUSEMOVE, _on_WM_MOUSEMOVE)
 
@@ -123,6 +130,27 @@ class MySlider(Window, FocusHandler):
             self.width = lparam & 0xFFFF
 
         self.register_message_callback(WM_SIZE, _on_WM_SIZE)
+
+        if show_tooltip:
+            self.tooltips = Tooltips(
+                self,
+                style = WS_POPUP | TTS_ALWAYSTIP | TTS_NOANIMATE | TTS_NOFADE
+            )
+            toolInfo = TOOLINFOW()
+            toolInfo.hwnd = self.parent_window.hwnd
+            toolInfo.uFlags = TTF_IDISHWND | TTF_SUBCLASS
+            toolInfo.uId = self.hwnd
+            toolInfo.lpszText = LPSTR_TEXTCALLBACKW
+            self.tooltips.send_message(TTM_ADDTOOLW, 0, byref(toolInfo))
+
+            ########################################
+            #
+            ########################################
+            def _on_WM_MOUSEMOVE2(hwnd, wparam, lparam):
+                if not self.is_down:
+                    self.tooltips.send_message(TTM_POPUP, 0, 0)
+
+            self.register_message_callback(WM_MOUSEMOVE, _on_WM_MOUSEMOVE2)
 
     ########################################
     #

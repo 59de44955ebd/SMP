@@ -493,6 +493,18 @@ class App(MainWin):
                     if nm.dwItemSpec == IDX_STATUSBAR_PART_TIME:
                         self.action_toggle_show_millisecs()
 
+            elif mh.hwndFrom == self.slider_seek.tooltips.hwnd:
+                if msg == TTN_GETDISPINFOW:
+                    pt = POINT()
+                    user32.GetCursorPos(byref(pt))
+                    user32.MapWindowPoints(None, self.slider_seek.hwnd, byref(pt), 1)
+                    lpnmtdi = cast(lparam, POINTER(NMTTDISPINFOW))
+                    h, m, s, ms = time_to_hms(self.media_duration * pt.x / (self.slider_seek.width - 1))
+                    if self.media_duration >= 3600:
+                        lpnmtdi.contents.szText = '{:02d}:{:02d}:{:02d}'.format(h, m, s)
+                    else:
+                        lpnmtdi.contents.szText = '{:02d}:{:02d}'.format(m, s)
+
         self.register_message_callback(WM_NOTIFY, _on_WM_NOTIFY)
 
         ########################################
@@ -745,7 +757,7 @@ class App(MainWin):
     ########################################
     def create_seekbar(self):
 
-        self.slider_seek = MySlider(self, height = 16, show_knob = True)
+        self.slider_seek = MySlider(self, height = 16, show_knob = True, show_tooltip = True)
 
         ########################################
         #
