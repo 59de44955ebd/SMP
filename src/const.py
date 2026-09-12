@@ -3,7 +3,7 @@ import sys
 
 APP_NAME = 'SMP'
 APP_CLASS = 'SMPClass'
-APP_VERSION = '0.1'
+APP_VERSION = '0.2'
 
 IS_FROZEN = getattr(sys, 'frozen', False)
 
@@ -31,3 +31,5 @@ STATE_PAUSED = 2
 STATE_PLAYING = 3
 
 MIN_PROGRESS_DURATION = 5
+
+VOLUME_STEP = 5

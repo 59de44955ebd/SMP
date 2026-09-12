@@ -10,7 +10,6 @@ from winapp.window import *
 from const import *
 
 SETTINGS.ADDITIONAL_BROWSER_ARGUMENTS = '--allow-file-access-from-files --disable-web-security'
-SETTINGS.ALLOW_HOST_INPUT_PROCESSING = True
 SETTINGS.DEFAULT_CONTEXT_MENUS_ENABLED = False
 # Use a local profile folder
 if IS_FROZEN:
@@ -44,6 +43,13 @@ class Player(WebView2):
         self._height = 0
         self._time = 0
         self._playing = False
+
+        self._image_values = {
+            'brightness': 0,
+            'contrast': 0,
+            'hue': 0,
+            'saturation': 0
+        }
 
         self._initialized = False
 
@@ -99,20 +105,15 @@ class Player(WebView2):
             ########################################
             #
             ########################################
-            def _on_mousedown(is_right):
-                if is_right:
-                    user32.SendMessageW(parent_window.hwnd, WM_CONTEXTMENU, 0, 0)
-                else:
-                    user32.SendMessageW(parent_window.hwnd, WM_LBUTTONDOWN, 0, 0)
-
-            self.expose('on_mousedown', _on_mousedown)
-
-            ########################################
-            #
-            ########################################
             def _on_initialized():
                 self._initialized = True
+                user32.SetWindowLongA(self.hwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE | WS_DISABLED)
                 self.execute_js(f'player.set_volume({self._volume});')
+
+                for k, v in self._image_values.items():
+                    if v != 0:
+                        getattr(self, f'set_{k}')(v)
+
                 if self._media_file:
                     self._load(self._media_file)
                     self._media_file = None
@@ -348,21 +349,25 @@ class Player(WebView2):
     #
     ########################################
     def skip_forward(self, secs):
-        self.set_time(self._time + secs)
+        t = self._time + secs
+        if self._duration:
+            t = min(self._duration, t)
+        self.set_time(t)
 
     ########################################
     # No web API available for finding FPS, so we pretend it's 25
     ########################################
     def step_back(self, frames=1):
-        secs = frames / 25
-        self.set_time(max(0, self._time - secs))
+        self.set_time(max(0, self._time - frames / 25))
 
     ########################################
     # No web API available for finding FPS, so we pretend it's 25
     ########################################
     def step_forward(self, frames=1):
-        secs = frames / 25
-        self.set_time(self._time + secs)
+        t = self._time + frames / 25
+        if self._duration:
+            t = min(self._duration, t)
+        self.set_time(t)
 
     ########################################
     #
@@ -384,29 +389,41 @@ class Player(WebView2):
     # value: -1..1
     ########################################
     def set_brightness(self, value: float):
-        value = int(100 + value * 100)
-        self.execute_js(f'player.set_brightness({value});')
+        if self._initialized:
+            value = int(100 + value * 100)
+            self.execute_js(f'player.set_brightness({value});')
+        else:
+            self._image_values['brightness'] = value
 
     ########################################
     # value: -1..1
     ########################################
     def set_contrast(self, value: float):
-        value = int(100 + value * 100)
-        self.execute_js(f'player.set_contrast({value});')
+        if self._initialized:
+            value = int(100 + value * 100)
+            self.execute_js(f'player.set_contrast({value});')
+        else:
+            self._image_values['contrast'] = value
 
     ########################################
     # value: -1..1
     ########################################
     def set_saturation(self, value: float):
-        value = int(100 + value * 100)
-        self.execute_js(f'player.set_saturation({value});')
+        if self._initialized:
+            value = int(100 + value * 100)
+            self.execute_js(f'player.set_saturation({value});')
+        else:
+            self._image_values['saturation'] = value
 
     ########################################
     # value: -1..1
     ########################################
     def set_hue(self, value: float):
-        value = int(360 + value * 180)
-        self.execute_js(f'player.set_hue({value});')
+        if self._initialized:
+            value = int(360 + value * 180)
+            self.execute_js(f'player.set_hue({value});')
+        else:
+            self._image_values['hue'] = value
 
     ########################################
     # e.g. '4:3', '' to reset to default, None means resize to window

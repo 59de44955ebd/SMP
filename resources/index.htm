@@ -62,10 +62,6 @@ let media_loaded = false;
 
 const video = document.querySelector('video');
 
-//video.onloadedmetadata = function(e){
-//	chrome.webview.api.on_parsed(video.videoWidth, video.videoHeight, video.duration, video.webkitAudioDecodedByteCount != 0);
-//}
-
 video.onloadeddata = function(e){
 	chrome.webview.api.on_parsed(true, video.videoWidth, video.videoHeight, video.duration, video.webkitAudioDecodedByteCount != 0);
 	media_loaded = true;
@@ -73,7 +69,6 @@ video.onloadeddata = function(e){
 }
 
 const _onerror = function(e){
-//	if (video.error instanceof MediaError)
 	chrome.webview.api.on_parsed(false, 0, 0, 0, false);
 	video.onerror = null;
 }
@@ -87,24 +82,12 @@ video.ontimeupdate = function(){
 	chrome.webview.api.on_time_update(video.currentTime);
 }
 
-//player.onended = function(){
-//	console.log('END');
-//	//chrome.webview.api.on_time_update(player.currentTime);
-//}
-
 video.onpause = function(){
 	chrome.webview.api.on_state_change(0);
 }
 
 video.onplay = function(){
 	chrome.webview.api.on_state_change(1);
-}
-
-document.body.onmousedown = (e) => {
-	if (e.button == 0)
-		chrome.webview.api.on_mousedown(false);
-	else if (e.button == 2)
-		chrome.webview.api.on_mousedown(true);
 }
 
 // Load the sound bank (your path may vary)
@@ -132,9 +115,7 @@ await synth.soundBankManager.addSoundBank(sf_data, "main");
 
 // Create the sequencer
 const seq = new Sequencer(synth);
-//console.log(seq);
 
-//alert(window.midi_volume);
 gain_node.gain.value = 1;
 
 const timer_start = () => {
@@ -167,32 +148,21 @@ player.load = (uri, src_is_midi)  => {
 	}
 }
 
-// load_srt("file:///D:/test/test.srt")
 player.load_subs = (subs_url) => {
 	video.innerHTML = '';
 	if (subs_url.toLowerCase().endsWith('.srt'))
 		fetchTrack(subs_url).then(content => {
 			const blob = new Blob([srt2vtt(content)], {type: 'text/vtt'});
-
 			const track = document.createElement('track');
 			track.kind = 'subtitles';
-	//		track.label = subtitle.dataset.label;
-	//		track.srclang = subtitle.dataset.lang;
 			track.default = true;
 			track.src = URL.createObjectURL(blob);
 			video.appendChild(track);
-
-	//		const track = player.addTextTrack("subtitles");
-	//		track.src = URL.createObjectURL(blob);
-	//		track.default = true;
-	//		track.mode = "showing";
 		});
 	else
 	{
 		const track = document.createElement('track');
 		track.kind = 'subtitles';
-//		track.label = subtitle.dataset.label;
-//		track.srclang = subtitle.dataset.lang;
 		track.default = true;
 		track.src = subs_url;
 		video.appendChild(track);

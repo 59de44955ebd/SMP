@@ -72,6 +72,7 @@ class Player():
         self._has_video = False
         self._has_audio = False
         self._is_midi = False
+        self._duration = 0
 
         self._fullscreen = False
 
@@ -208,6 +209,7 @@ class Player():
         self._has_video = False
         self._has_audio = False
         self._is_midi = False
+        self._duration = 0
 
     ########################################
     #
@@ -513,6 +515,12 @@ class Player():
             if self._has_audio:
                 self.set_volume(self._volume)
 
+        if self._media_seeking:
+            try:
+                self._duration = self._media_seeking.getDuration()
+            except:
+                pass
+
         on_parsed(True)
 
     ########################################
@@ -592,7 +600,10 @@ class Player():
     #
     ########################################
     def skip_forward(self, secs):
-        self.set_time(self.get_time() + secs)
+        t = self.get_time() + secs
+        if self._duration:
+            t = min(self._duration / 10000000.0, t)
+        self.set_time(t)
 
     ########################################
     #
@@ -614,8 +625,13 @@ class Player():
     def step_forward(self, frames = 1):
         if self._media_seeking is None or self._frame_step == 0:
             return
+
+        t = self._media_seeking.GetCurrentPosition() + int(frames * self._frame_step)
+        if self._duration:
+            t = min(self._duration, t)
+
         self._media_seeking.SetPositions(
-            self._media_seeking.GetCurrentPosition() + int(frames * self._frame_step),
+            t, #self._media_seeking.GetCurrentPosition() + int(frames * self._frame_step),
             AM_SEEKING_AbsolutePositioning,
             0,
             AM_SEEKING_NoPositioning
@@ -625,12 +641,13 @@ class Player():
     # returns seconds as float
     ########################################
     def get_duration(self) -> float:
-        if self._media_seeking is None:
-            return 0
-        try:
-            return self._media_seeking.getDuration() / 10000000.0
-        except:
-            return 0
+        return self._duration / 10000000.0
+#        if self._media_seeking is None:
+#            return 0
+#        try:
+#            return self._media_seeking.getDuration() / 10000000.0
+#        except:
+#            return 0
 
     ########################################
     #

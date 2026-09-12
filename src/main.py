@@ -9,7 +9,6 @@ from winapp.controls_themed.listbox import *
 from winapp.controls_themed.static import *
 from winapp.controls_themed.toolbar import *
 from winapp.controls_themed.tooltips import *
-from winapp.controls_themed.trackbar import *
 from winapp.custom_controls.pane import *
 from winapp.dialogs import *
 from winapp.trayicon import *
@@ -17,9 +16,21 @@ from winapp.utils.lnk import get_lnk_infos
 from winapp.utils.taskbar import taskbar, TBPF
 
 from const import *
+from myslider import *
 from mystatusbar import *
 from resources import *
 from playlist import *
+
+RATIOS = {
+    IDM_RATIO_DEFAULT: '',
+    IDM_RATIO_4_3: '4:3',
+    IDM_RATIO_5_4: '5:4',
+    IDM_RATIO_16_9: '16:9',
+    IDM_RATIO_16_10: '16:10',
+    IDM_RATIO_235_100: '235:100',
+    IDM_RATIO_185_100: '185:100',
+    IDM_RATIO_NONE: None,
+}
 
 ########################################
 # Load settings from registry
@@ -33,7 +44,7 @@ def load_settings() -> dict:
         # bool
         for prop in (
             'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist', 'stayontop', 'minimize_to_tray', 'auto_resize_to_video',
-            'single_instance', 'remember_playlist', 'use_meta_title'  # 'show_subtitles',
+            'single_instance', 'remember_playlist', 'use_meta_title'
         ):
             if advapi32.RegQueryValueExW(hkey, prop, None, None, byref(data), byref(cbData)) == ERROR_SUCCESS:
                 settings[prop] = cast(data, POINTER(DWORD)).contents.value == 1
@@ -54,6 +65,12 @@ def load_settings() -> dict:
             if advapi32.RegQueryValueExW(hkey, 'last_playlist', None, None, data_str, byref(cbdata_str)) == ERROR_SUCCESS:
                 settings['last_playlist'] = cast(data_str, LPWSTR).value
 
+        cbdata_str = DWORD()
+        if advapi32.RegQueryValueExW(hkey, 'color_values', None, None, None, byref(cbdata_str)) == ERROR_SUCCESS:
+            data_str = (BYTE * cbdata_str.value)()
+            if advapi32.RegQueryValueExW(hkey, 'color_values', None, None, data_str, byref(cbdata_str)) == ERROR_SUCCESS:
+                settings['color_values'] = cast(data_str, LPWSTR).value
+
     else:
         advapi32.RegCreateKeyW(HKEY_CURRENT_USER, f'Software\\59de44955ebd\\{APP_NAME}' , byref(hkey))
     advapi32.RegCloseKey(hkey)
@@ -69,7 +86,7 @@ def save_settings(main):
         # int / bool
         for prop in (
             'engine', 'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist', 'theme', 'volume', 'stayontop', 'minimize_to_tray',
-            'auto_resize_to_video', 'single_instance', 'remember_playlist', 'use_meta_title'  # 'show_subtitles',
+            'auto_resize_to_video', 'single_instance', 'remember_playlist', 'use_meta_title'
         ):
             advapi32.RegSetValueExW(hkey, prop, 0, REG_DWORD, byref(DWORD(int(getattr(main, prop)))), dwsize)
 
@@ -87,6 +104,9 @@ def save_settings(main):
 
         buf = create_unicode_buffer(main.last_playlist)
         advapi32.RegSetValueExW(hkey, 'last_playlist', 0, REG_SZ, buf, sizeof(buf))
+
+        buf = create_unicode_buffer(str(main.color_values))
+        advapi32.RegSetValueExW(hkey, 'color_values', 0, REG_SZ, buf, sizeof(buf))
 
         advapi32.RegCloseKey(hkey)
 
@@ -218,6 +238,12 @@ class App(MainWin):
         else:
             last_playlist = None
 
+        if 'color_values' in APP_SETTINGS:
+            self.color_values = eval(APP_SETTINGS['color_values'])
+            del APP_SETTINGS['color_values']
+        else:
+            self.color_values = {'brightness': 100, 'contrast': 100, 'hue': 100, 'saturation': 100}
+
         for k, v in APP_SETTINGS.items():
             setattr(self, k, v)
 
@@ -261,8 +287,8 @@ class App(MainWin):
             IDM_REWIND:                 self.action_rewind,
 
             # Audio
-            IDM_VOLUME_DOWN:            lambda: self.action_change_volume(-1),
-            IDM_VOLUME_UP:              lambda: self.action_change_volume(1),
+            IDM_VOLUME_DOWN:            lambda: self.action_change_volume(-VOLUME_STEP),
+            IDM_VOLUME_UP:              lambda: self.action_change_volume(VOLUME_STEP),
             IDM_MUTE:                   self.action_toggle_mute,
 
             # Video
@@ -324,6 +350,7 @@ class App(MainWin):
             ex_style = WS_EX_ACCEPTFILES,
             h_accel = user32.LoadAcceleratorsW(HMOD_RESOURCES, LPCWSTR(1)),
             h_icon = user32.LoadIconW(HMOD_RESOURCES, LPCWSTR(1)),
+            h_brush = COLOR_3DFACE + 1,
             h_menu = user32.LoadMenuW(HMOD_RESOURCES, LPCWSTR(1)),
             left = left, top = top, width = width, height = height,
         )
@@ -383,7 +410,7 @@ class App(MainWin):
         use_dark_mode = self.theme == IDM_THEME_DARK or (self.theme == IDM_THEME_AUTO and reg_should_use_dark_mode())
 
         self.create_player()
-        self.create_trackbar()
+        self.create_seekbar()
         self.create_toolbar(use_dark_mode)
         self.create_statusbar()
         self.create_systray()
@@ -557,17 +584,17 @@ class App(MainWin):
         if self.toolbar.visible:
             height -= self.toolbar.height
 
-        if self.trackbar_seek.visible:
-            height -= self.trackbar_seek.height
+        if self.slider_seek.visible:
+            height -= (self.slider_seek.height + 6)
 
         # Reposition and resize the seek trackbar
-        self.trackbar_seek.set_window_pos(0, height, width, self.trackbar_seek.height)
+        self.slider_seek.set_window_pos(3, height + 3, width - 6, self.slider_seek.height)
 
         # Reposition mute button
-        self.static_mute.set_window_pos(width - self.trackbar_volume.width - 16, 8, flags = SWP_NOSIZE)
+        self.static_mute.set_window_pos(width - self.slider_volume.width - 16 - 12, 7, flags = SWP_NOSIZE)
 
         # Reposition volume trackbar
-        self.trackbar_volume.set_window_pos(width - self.trackbar_volume.width, 6, flags = SWP_NOSIZE)
+        self.slider_volume.set_window_pos(width - self.slider_volume.width - 3, 6 + 1, flags = SWP_NOSIZE)
 
         if self.pane.visible:
             x = max(0, width - self.pane.splitter.pos)
@@ -606,7 +633,7 @@ class App(MainWin):
 
         self.ui_height = rc_win.bottom - rc_win.top - rc_win_client.bottom  # title bar, menu, window frame
         if self.show_seek:
-            self.ui_height += self.trackbar_seek.height
+            self.ui_height += self.slider_seek.height
         if self.show_controls:
             self.ui_height += self.toolbar.height
         if self.show_status:
@@ -640,7 +667,7 @@ class App(MainWin):
     ########################################
     def timer_start(self):
         self.create_timer(self._timer_proc, TIME_DISPLAY_UPDATE_PERIOD, timer_id=ID_TIMER_UPDATE_TIME)
-        kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED)
+        kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
 
     ########################################
     #
@@ -664,7 +691,7 @@ class App(MainWin):
 
         newclass = WNDCLASSEXW()
         newclass.lpfnWndProc = self._windowproc_player
-#        newclass.style = CS_VREDRAW | CS_HREDRAW #| CS_DBLCLKS
+        newclass.style = CS_DBLCLKS  # CS_VREDRAW | CS_HREDRAW #|
         newclass.lpszClassName = 'VideoContainer'
         newclass.hbrBackground = BLACK_BRUSH
         newclass.hCursor = user32.LoadCursorW(None, IDC_ARROW)
@@ -682,15 +709,9 @@ class App(MainWin):
             volume = self.volume / 100,
         )
 
-        if self.engine == IDM_ENGINE_WEBVIEW:
-
-            ########################################
-            #
-            ########################################
-            def _on_files_dropped(webview, files, target_id):
-                self.handle_dropped_items(files)
-
-            self.mediaplayer.connect(EVENT.FILES_DROPPED, _on_files_dropped)
+        for k, v in self.color_values.items():
+            if v != 100:
+                getattr(self.mediaplayer, f'set_{k}')((v - 100) / 100)
 
         ########################################
         #
@@ -711,30 +732,32 @@ class App(MainWin):
 
         self.video_container.register_message_callback(WM_CONTEXTMENU, _on_WM_CONTEXTMENU)
 
+        ########################################
+        #
+        ########################################
+        def _on_WM_LBUTTONDBLCLK(hwnd, wparam, lparam):
+            self.action_toggle_fullscreen()
+
+        self.video_container.register_message_callback(WM_LBUTTONDBLCLK, _on_WM_LBUTTONDBLCLK)
+
     ########################################
     #
     ########################################
-    def create_trackbar(self):
+    def create_seekbar(self):
+
+        self.slider_seek = MySlider(self, height = 16, show_knob = True)
 
         ########################################
         #
         ########################################
-        def _time_hscroll_callback(msg, val):
-            secs = self.media_duration * val / SEEK_RANGE
+        def _on_seek_pos_changed(pos):
+            secs = self.media_duration * pos
             self.mediaplayer.set_time(secs)
             if self._state == STATE_STOPPED:
                 self.update_ui_player_state(STATE_PAUSED)
             self.update_time_display(secs)
 
-        self.trackbar_seek = TrackBar(
-            self,
-            range_max = SEEK_RANGE,
-            bg_color = 0xf0f0f0,
-            hscroll_callback = _time_hscroll_callback,
-            height = 21,
-            restore_focus_hwnd = self.hwnd,
-            style = WS_CHILD | TBS_NOTICKS | (WS_VISIBLE if self.show_seek else 0),
-        )
+        self.slider_seek.connect(EVENT_POS_CHANGED, _on_seek_pos_changed)
 
     ########################################
     #
@@ -767,29 +790,27 @@ class App(MainWin):
         self.toolbar.send_message(TB_SETPADDING, 0, MAKELONG(10, 11))
         self.toolbar.send_message(TB_SETINDENT, 4, 0)
 
-        # Create volume trackbar and add it to the toolbar
-        def _volume_hscroll_callback(msg, val):
-            self.volume = val
-            if not self.is_mute:
-                self.mediaplayer.set_volume(val / 100)
+        # Create volume slider and add it to the toolbar
+        self.slider_volume = MySlider(self.toolbar, height = 16, width = 102, initial_pos = self.volume / 100, show_text = True)
 
-        self.trackbar_volume = TrackBar(
-            self.toolbar,
-            current_value = self.volume,
-            width = 120, height = 21,
-            bg_color = 0xf0f0f0,
-            hscroll_callback = _volume_hscroll_callback,
-            restore_focus_hwnd = self.hwnd,
-            style = WS_CHILD | WS_VISIBLE | TBS_TOOLTIPS | TBS_NOTICKS
-        )
+        ########################################
+        #
+        ########################################
+        def _on_volume_pos_changed(pos):
+            self.volume = int(100 * pos)
+            if not self.is_mute:
+                self.mediaplayer.set_volume(pos)
+
+        self.slider_volume.connect(EVENT_POS_CHANGED, _on_volume_pos_changed)
 
         ########################################
         #
         ########################################
         def _on_WM_MOUSEWHEEL(hwnd, wparam, lparam):
-            val = user32.SendMessageW(self.trackbar_volume.hwnd, TBM_GETPOS, 0, 0) + c_short(HIWORD(wparam)).value // 120
-            user32.SendMessageW(self.trackbar_volume.hwnd, TBM_SETPOS, TRUE, val)
-            _volume_hscroll_callback(0, val)
+            self.volume = max(0, min(100, self.volume + VOLUME_STEP * c_short(HIWORD(wparam)).value // 120))
+            self.slider_volume.set_pos(self.volume / 100)
+            if not self.is_mute:
+                self.mediaplayer.set_volume(self.volume / 100)
 
         self.register_message_callback(WM_MOUSEWHEEL, _on_WM_MOUSEWHEEL)
 
@@ -884,8 +905,8 @@ class App(MainWin):
             if self.toolbar.visible:
                 height -= self.toolbar.height
 
-            if self.trackbar_seek.visible:
-                height -= self.trackbar_seek.height
+            if self.slider_seek.visible:
+                height -= self.slider_seek.height
 
             self.video_container.set_window_pos(
                 width = width - self.pane.splitter.pos, height = height,
@@ -1192,7 +1213,8 @@ class App(MainWin):
     ########################################
     def action_change_volume(self, step):
         self.volume = max(0, min(100, self.volume + step))
-        self.trackbar_volume.send_message(TBM_SETPOS, 1, self.volume)
+#        self.slider_volume.send_message(TBM_SETPOS, 1, self.volume)
+        self.slider_volume.set_pos(self.volume / 100)
         if not self.is_mute:
             self.mediaplayer.set_volume(self.volume / 100)
 
@@ -1224,9 +1246,10 @@ class App(MainWin):
                 for i, k in enumerate(['brightness', 'contrast', 'hue', 'saturation']):
                     hwnd_slider = user32.GetDlgItem(hwnd, [IDC_CC_TRACKBAR_BRIGHTNESS, IDC_CC_TRACKBAR_CONTRAST, IDC_CC_TRACKBAR_HUE, IDC_CC_TRACKBAR_SATURATION][i])
                     user32.SendMessageW(hwnd_slider, TBM_SETRANGEMAX, FALSE, 200)
-                    user32.SendMessageW(hwnd_slider, TBM_SETPOS, TRUE, 100)
+                    user32.SendMessageW(hwnd_slider, TBM_SETPOS, TRUE, self.color_values[k])
                     sliders[k] = hwnd_slider
                     statics[k] = user32.GetDlgItem(hwnd, [IDC_CC_STATIC_BRIGHTNESS, IDC_CC_STATIC_CONTRAST, IDC_CC_STATIC_HUE, IDC_CC_STATIC_SATURATION][i])
+                    user32.SetWindowTextW(statics[k], str(self.color_values[k] - 100))
                 center_window(hwnd, self.hwnd)
 
             elif msg == WM_COMMAND:
@@ -1235,6 +1258,7 @@ class App(MainWin):
                 if command == BN_CLICKED:
                     if control_id == IDC_BTN_RESET:
                         for k, hwnd_slider in sliders.items():
+                            self.color_values[k] = 100
                             getattr(self.mediaplayer, f'set_{k}')(0)
                             user32.SendMessageW(hwnd_slider, TBM_SETPOS, TRUE, 100)
                             user32.SetWindowTextW(statics[k], '0')
@@ -1260,6 +1284,7 @@ class App(MainWin):
 
                 idx = list(sliders.values()).index(lparam)
                 k = list(sliders.keys())[idx]
+                self.color_values[k] = hi
                 getattr(self.mediaplayer, f'set_{k}')((hi - 100) / 100)  # -1..1
                 user32.SetWindowTextW(statics[k], str(hi - 100))  # -100 .. 100
 
@@ -1427,7 +1452,7 @@ class App(MainWin):
         user32.SetMenu(self.hwnd, self.h_menu if show_ui else None)
         self.check_menu_item(IDM_SHOW_SEEK, self.show_seek)
         show = int(show_ui)
-        self.trackbar_seek.show(show)
+        self.slider_seek.show(show)
         self.toolbar.show(show)
         self.statusbar.show(show)
         self.update_layout()
@@ -1448,17 +1473,7 @@ class App(MainWin):
         user32.CheckMenuItem(self.h_menu, self.aspect_ratio, MF_BYCOMMAND | MF_UNCHECKED)
         self.aspect_ratio = idm
         user32.CheckMenuItem(self.h_menu, self.aspect_ratio, MF_BYCOMMAND | MF_CHECKED)
-        ratios = {
-            IDM_RATIO_DEFAULT: '',
-            IDM_RATIO_4_3: '4:3',
-            IDM_RATIO_5_4: '5:4',
-            IDM_RATIO_16_9: '16:9',
-            IDM_RATIO_16_10: '16:10',
-            IDM_RATIO_235_100: '235:100',
-            IDM_RATIO_185_100: '185:100',
-            IDM_RATIO_NONE: None,
-        }
-        self.mediaplayer.set_aspect_ratio(ratios[idm])
+        self.mediaplayer.set_aspect_ratio(RATIOS[idm])
 
     ########################################
     #
@@ -1484,7 +1499,7 @@ class App(MainWin):
     def action_toggle_seek(self):
         self.show_seek = not self.show_seek
         self.check_menu_item(IDM_SHOW_SEEK, self.show_seek)
-        self.trackbar_seek.show(int(self.show_seek))
+        self.slider_seek.show(int(self.show_seek))
         self.update_layout()
         self.update_min_size()
 
@@ -1636,9 +1651,9 @@ class App(MainWin):
         if had_media:
             self.action_close()
 
-        was_playing = self.mediaplayer.is_playing()
-        if was_playing:
-            self.timer_stop()
+#        was_playing = self.mediaplayer.is_playing()
+#        if was_playing:
+#            self.timer_stop()
 
         is_url = '://' in filename
         if not is_url:
@@ -1711,8 +1726,8 @@ class App(MainWin):
 
             self.update_ui_has_media(has_video, self.media_duration > 0, is_url)
 
-            if not was_playing:
-                self.update_ui_player_state(STATE_PLAYING)
+#            if not was_playing:
+            self.update_ui_player_state(STATE_PLAYING)
 
             if self.use_meta_title and caption is None:
                 try:
@@ -1790,7 +1805,7 @@ class App(MainWin):
     #
     ########################################
     def update_ui_reset(self):
-        self.trackbar_seek.enable_window(False)
+        self.slider_seek.enable_window(False)
         for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_SKIP_BACK, IDM_SKIP_FORWARD):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, FALSE)
         for idm in (
@@ -1824,7 +1839,7 @@ class App(MainWin):
     #
     ########################################
     def update_ui_has_media(self, has_video, has_duration, is_url):
-        self.trackbar_seek.enable_window(has_duration)
+        self.slider_seek.enable_window(has_duration)
 
         for idm in (IDM_PLAY_PAUSE, IDM_STOP):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, TRUE)
@@ -1859,7 +1874,8 @@ class App(MainWin):
         tbi.dwMask = TBIF_IMAGE | TBIF_TEXT
 
         if state == STATE_STOPPED:
-            self.trackbar_seek.send_message(TBM_SETPOS, 1, 0)
+#            self.slider_seek.send_message(TBM_SETPOS, 1, 0)
+            self.slider_seek.set_pos(0)
             self.statusbar.set_text('Stopped', IDX_STATUSBAR_PART_STATE)
             self.statusbar.set_text('', IDX_STATUSBAR_PART_TIME)
             tbi.iImage = 0
@@ -1905,6 +1921,7 @@ class App(MainWin):
         if not self.mediaplayer.is_playing() and not self.is_loop:
             if self.playlist.play_next():
                 return
+            self.timer_stop()
             self.update_ui_player_state(STATE_STOPPED)
 
     ########################################
@@ -1912,8 +1929,12 @@ class App(MainWin):
     ########################################
     def update_time(self, force=False):
         secs = self.mediaplayer.get_time()
+#        print(secs)
         if self.media_duration > 0:
-            self.trackbar_seek.send_message(TBM_SETPOS, 1, int(SEEK_RANGE * secs / self.media_duration))
+
+#            self.slider_seek.send_message(TBM_SETPOS, 1, int(SEEK_RANGE * secs / self.media_duration))
+            self.slider_seek.set_pos(secs / self.media_duration)
+
         self.update_counter += 1
         if force or self.update_counter % TIME_DISPLAY_UPDATE_STATUS_EVERY == 0:
             self.update_time_display(secs)

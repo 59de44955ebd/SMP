@@ -422,14 +422,6 @@ class WebView2:
 
         self._current_request_filter = ('*', WEB_RESOURCE_CONTEXT.ALL)
 
-        self._previous_hwnds = []
-        hwnd_next = None
-        while True:
-            hwnd_next = user32.FindWindowExW(self._parent_hwnd, hwnd_next, 'Chrome_WidgetWin_0', None)
-            if hwnd_next is None:
-                break
-            self._previous_hwnds.append(hwnd_next)
-
         if WebView2.environment is None:
             LOADER.CreateEnvironmentWithOptions(
                 SETTINGS.BROWSER_EXECUTABLE_FOLDER,
@@ -725,15 +717,7 @@ class WebView2:
             webview_profile.put_PreferredColorScheme(SETTINGS.COLOR_SCHEME)
             WebView2.profile_initialized = True
 
-        hwnd_next = None
-        while True:
-            hwnd_next = user32.FindWindowExW(self._parent_hwnd, hwnd_next, 'Chrome_WidgetWin_0', None)
-            if hwnd_next is None:
-                break
-            if hwnd_next not in self._previous_hwnds:
-                self.hwnd = hwnd_next
-                break
-        self._previous_hwnds = None
+        self.hwnd = user32.FindWindowExW(self._parent_hwnd, None, 'Chrome_WidgetWin_0', None)
 
         if self._init_hidden:
             self._controller.put_IsVisible(0)

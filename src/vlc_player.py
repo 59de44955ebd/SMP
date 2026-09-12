@@ -366,25 +366,32 @@ class Player():
     #
     ########################################
     def skip_forward(self, secs):
-        self.set_time(self.get_time() + secs)
+        t = self.get_time() + secs
+        if self._duration:
+            t = min(self._duration, t)
+        self.set_time(t)
 
     ########################################
     #
     ########################################
     def step_back(self, frames=1):
         fps = self._player.get_fps()
-        if fps:
-            ms = int(self._player.get_time() - frames * 1000 / fps)
-            self._player.set_time(ms)
+        if not fps:
+            return
+        ms = max(0, int(self._player.get_time() - frames * 1000 / fps))
+        self._player.set_time(ms)
 
     ########################################
     #
     ########################################
     def step_forward(self, frames=1):
         fps = self._player.get_fps()
-        if fps:
-            ms = int(self._player.get_time() + frames * 1000 / fps)
-            self._player.set_time(ms)
+        if not fps:
+            return
+        t = self.get_time() + frames / fps
+        if self._duration:
+            t = min(self._duration, t)
+        self._player.set_time(int(t * 1000))
 
     ########################################
     #
