@@ -563,15 +563,21 @@ class App(MainWin):
     #
     ########################################
     def handle_dropped_items(self, dropped_items):
-        if len(dropped_items) > 1 or os.path.isdir(dropped_items[0]):
-            self.action_close()
-            self.playlist.handle_dropped_items(dropped_items)
-            if not self.show_playlist:
-                self.action_toggle_playlist()
-            self.playlist.play_next()
-        elif os.path.isfile(dropped_items[0]):
-            self.load_media_file(dropped_items[0])
-        self.activate_window()
+#        if len(dropped_items) > 1 or os.path.isdir(dropped_items[0]):
+#            self.action_close()
+#            self.playlist.handle_dropped_items(dropped_items)
+#            if not self.show_playlist:
+#                self.action_toggle_playlist()
+#            self.playlist.play_next()
+#        elif os.path.isfile(dropped_items[0]):
+#            self.load_media_file(dropped_items[0])
+#        self.activate_window()
+
+        media_files = [f for f in dropped_items if os.path.isfile(f)]
+        if media_files:
+            self.load_media_file(media_files[0])
+            self.activate_window()
+            self.playlist.add_files(media_files, True)
 
     ########################################
     #
@@ -778,13 +784,10 @@ class App(MainWin):
         toolbar_buttons = (
             ('Play', IDM_PLAY_PAUSE, BTNS_BUTTON),
             ('Stop', IDM_STOP, BTNS_BUTTON | BTNS_CHECK),
-            ('-'),
             ('Previous', IDM_PLAY_PREVIOUS),
             ('Skip back', IDM_SKIP_BACK),
             ('Skip forward', IDM_SKIP_FORWARD),
             ('Next', IDM_PLAY_NEXT),
-            ('-'),
-            ('Loop', IDM_LOOP, BTNS_BUTTON | BTNS_CHECK),
         )
 
         self.toolbar = ToolBar(
@@ -1090,7 +1093,6 @@ class App(MainWin):
         sub_file = show_open_file_dialog(self, 'Load Subtitles', '.srt',
             'Subtitle files (*.srt;*.webvtt;*.vtt)\0*.srt;*.webvtt;*.vtt\0\0')
         if sub_file:
-#            try:
 
             ok = self.mediaplayer.load_sub_file(sub_file)
             if not ok:
@@ -1106,7 +1108,6 @@ class App(MainWin):
                 user32.AppendMenuW(self.h_menu_sub_tracks, MF_STRING, IDM_SUB_TRACK, 'Disable')
                 self.COMMAND_MESSAGE_MAP[IDM_SUB_TRACK] = lambda: self.action_select_sub_track(-1)
                 for track in sub_tracks:
-#                        print(track)
                     track_id, name, enabled = track
                     idm = IDM_SUB_TRACK + 1 + track_id
                     self.COMMAND_MESSAGE_MAP[idm] = lambda track_id=track_id: self.action_select_sub_track(track_id)
@@ -1115,8 +1116,6 @@ class App(MainWin):
                         self._active_sub_track_id = track_id
 
                 user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_ENABLED)
-#            except:
-#                print('mediaplayer.load_subtitles failed')
 
         self.activate_window()
 
@@ -1603,7 +1602,6 @@ class App(MainWin):
     def action_toggle_loop(self):
         self.is_loop = not self.is_loop
         self.check_menu_item(IDM_LOOP, self.is_loop)
-        self.toolbar.send_message(TB_CHECKBUTTON, IDM_LOOP, self.is_loop)
         self.mediaplayer.set_loop(self.is_loop)
 
     ########################################
@@ -1932,8 +1930,10 @@ class App(MainWin):
         self.update_time()
         # Detect end reached
         if not self.mediaplayer.is_playing() and not self.is_loop:
+
             if self.playlist.play_next():
                 return
+
             self.timer_stop()
             self.update_ui_player_state(STATE_STOPPED)
 

@@ -495,7 +495,6 @@ class Player():
                 self._video_window.Owner = self._parent_window.hwnd
                 if not USE_MPC_RENDERER:
                     self._video_window.WindowStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS
-                self._video_window.SetWindowPosition(0, 0, self._width, self._height)
                 self._video_window.MessageDrain = self._parent_window.hwnd
 
                 if USE_MPC_RENDERER:
@@ -504,6 +503,7 @@ class Player():
                     self._ratio_mpc = self._forced_ratio or self._ratio_org_mpc
                 else:
                     self._set_keepaspectratio(self._use_ratio and not self._forced_ratio)
+                self._resize(self._width, self._height)
 
                 for k, value in self._image_values.items():
                     if value != 0:

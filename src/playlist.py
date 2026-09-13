@@ -160,7 +160,7 @@ class PlayList(ListBox):
                         playlist = load_pls(playlist_file)
                     else:
                         playlist = load_m3u(playlist_file)
-                    self.clear_playlist()
+                    self.clear()
                     for media_item in playlist:
                         self.add_item(media_item)
                     self.emit(EVENT_PLAYLIST_HAS_ITEMS_CHANGED, bool(self.playlist_items))
@@ -200,7 +200,7 @@ class PlayList(ListBox):
                     self.emit(EVENT_PLAYLIST_HAS_ITEMS_CHANGED, False)
 
             elif idm == IDM_PLAYLIST_CLEAR:
-                self.clear_playlist()
+                self.clear()
 
         self.register_message_callback(WM_CONTEXTMENU, _on_WM_CONTEXTMENU)
 
@@ -230,10 +230,8 @@ class PlayList(ListBox):
                     gdi32.SetTextColor(di.hDC, DARK_TEXT_COLOR if self.is_dark else 0x000000)
 
                 if self.is_dark:
-#                    gdi32.SetTextColor(di.hDC, 0xF89A26 if di.itemID == self.active_idx else DARK_TEXT_COLOR)
                     gdi32.SetBkColor(di.hDC, 0x3e3e3e if di.itemState & ODS_SELECTED else DARK_BG_COLOR)
                 else:
-#                    gdi32.SetTextColor(di.hDC, 0xF89A26 if di.itemID == self.active_idx else 0x000000)
                     gdi32.SetBkColor(di.hDC,  0xF1DACC if di.itemState & ODS_SELECTED else 0xffffff)
 
                 # Get and display the text for the list item.
@@ -325,7 +323,7 @@ class PlayList(ListBox):
         else:
             playlist = load_m3u(playlist_file)
         if not append:
-            self.clear_playlist()
+            self.clear()
         self.send_message(WM_SETREDRAW, FALSE, 0)
         for media_item in playlist:
             self.add_item(media_item)
@@ -335,15 +333,34 @@ class PlayList(ListBox):
     ########################################
     #
     ########################################
-    def clear_playlist(self):
+    def clear(self):
         if not self.playlist_items:
             return
         self.playlist_items = []
         self.send_message(LB_RESETCONTENT, 0, 0)
+
         if self.active_idx >= 0:
             self.emit(EVENT_PLAYLIST_ACTIVE_ITEM_REMOVED)
             self.active_idx = -1
+
         self.emit(EVENT_PLAYLIST_HAS_ITEMS_CHANGED, False)
+
+    ########################################
+    #
+    ########################################
+    def add_files(self, media_files, clear=False):
+        self.send_message(WM_SETREDRAW, FALSE, 0)
+        if clear:
+            self.playlist_items = []
+            self.send_message(LB_RESETCONTENT, 0, 0)
+
+        for media_file in media_files:
+            media_item = MediaItem(media_file)
+            self.playlist_items.append(media_item)
+            self.add_string(media_item.title or os.path.basename(media_item.filename))
+        self.active_idx = 0
+        self.send_message(WM_SETREDRAW, TRUE, 0)
+        self.emit(EVENT_PLAYLIST_HAS_ITEMS_CHANGED, True)
 
     ########################################
     #
@@ -394,7 +411,6 @@ class PlayList(ListBox):
     def play_index(self, playlist_idx):
         for idx in range(playlist_idx, len(self.playlist_items)):
             if not self.playlist_items[idx].invalid:
-#                    return self.play_index(idx)
                 self.active_idx = idx
                 self.redraw()
                 media_item = self.playlist_items[idx]
@@ -403,38 +419,26 @@ class PlayList(ListBox):
 
         self.active_idx = -1
         self.redraw()
-        return False
 
-#        self.active_idx = idx
-#        self.redraw()
-#        media_item = self.playlist_items[idx]
-##        self.emit(EVENT_PLAYLIST_PLAY_ITEM_REQUESTED, media_item)
-#        if media_item.invalid:
-#            print('invalid')
-#            return False
-#        self.emit(EVENT_PLAYLIST_PLAY_ITEM_REQUESTED, media_item)
-#        return True
+        return False
 
     ########################################
     #
     ########################################
     def play_next(self, loop = False):
         if self.active_idx < len(self.playlist_items) - 1:
-#            return self.play_index(self.active_idx + 1)
 
             for idx in range(self.active_idx + 1, len(self.playlist_items)):
                 if not self.playlist_items[idx].invalid:
-#                    return self.play_index(idx)
                     self.active_idx = idx
                     self.redraw()
                     media_item = self.playlist_items[idx]
                     self.emit(EVENT_PLAYLIST_PLAY_ITEM_REQUESTED, media_item)
                     return True
 
-#        elif loop:
-#            return self.play_index(0)
-        self.active_idx = -1
-        self.redraw()
+        elif loop:
+            return self.play_index(0)
+
         return False
 
     ########################################
@@ -442,21 +446,18 @@ class PlayList(ListBox):
     ########################################
     def play_previous(self, loop = False):
         if self.active_idx > 0:
-#            return self.play_index(self.active_idx - 1)
 
             for idx in range(self.active_idx - 1, -1, -1):
                 if not self.playlist_items[idx].invalid:
-#                    return self.play_index(idx)
                     self.active_idx = idx
                     self.redraw()
                     media_item = self.playlist_items[idx]
                     self.emit(EVENT_PLAYLIST_PLAY_ITEM_REQUESTED, media_item)
                     return True
 
-#        elif loop:
-#            return self.play_index(len(self.playlist_items) - 1)
-        self.active_idx = -1
-        self.redraw()
+        elif loop:
+            return self.play_index(len(self.playlist_items) - 1)
+
         return False
 
     ########################################
@@ -465,16 +466,6 @@ class PlayList(ListBox):
     def set_invalid(self, media_item):
         media_item.invalid = True
         self.redraw()
-
-        # Check if there are valid items left
-#        ok = False
-#        for media_item in self.playlist_items:
-#            if not media_item.invalid:
-#                ok = True
-#                break
-#
-#        if ok:
-#            self.play_next(True)
 
     ########################################
     #
