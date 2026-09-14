@@ -1,19 +1,24 @@
 import os
-#from math import log
+
 from dshow_interfaces import *
 from winapp.const import WM_SIZE, WM_APP
+
+from const import RES_DIR
 
 FILTER_DIR = os.path.join(os.path.dirname(__file__), 'filters')
 
 ADD_DIRECTVOBSUB = True
 USE_LAV_DECODERS = True
 USE_LOCAL_FILTERS = True
-USE_MASTER_VOLUME = True
+USE_MASTER_VOLUME = False
+USE_BASS_MIDI = True
+USE_MPC_RENDERER = True  # If False, use VMR9 (Windowed) instead
 
-# If False, use VMR9 (Windowed) instead
-USE_MPC_RENDERER = True
 
 WM_EVENT_NOTIFY = WM_APP + 1
+
+if not USE_MASTER_VOLUME:
+    from math import log
 
 winmm = windll.Winmm
 
@@ -249,24 +254,49 @@ class Player():
     #
     ########################################
     def _build_graph_midi(self, src_file):
-        file_source_async = CreateObject(CLSID_FileSourceAsync, interface = IBaseFilter)
-        self._filter_graph.AddFilter(file_source_async, 'FileSourceAsync')
-        file_source_async_src = file_source_async.QueryInterface(IFileSourceFilter)
-        file_source_async_src.Load(src_file, None)
+        if USE_BASS_MIDI:
 
-        midi_parser = CreateObject(CLSID_MIDIParser, interface = IBaseFilter)
-        self._filter_graph.AddFilter(midi_parser, 'MIDIParser')
+            if USE_LOCAL_FILTERS:
+                bass_audio_source = self._create_object_from_path(CLSID_BassAudioSource, os.path.join(FILTER_DIR, 'BassAudioSource.ax'))
+            else:
+                bass_audio_source = CreateObject(CLSID_BassAudioSource, interface = IBaseFilter)
+            self._filter_graph.AddFilter(bass_audio_source, 'Base Audio Source')
 
-        midi_renderer = CreateObject(CLSID_MIDIRenderer, interface = IBaseFilter)
-        self._filter_graph.AddFilter(midi_renderer, 'MIDIRenderer')
+            bass_audio_source.QueryInterface(IBassSource2).SetSoundfont(os.path.join(RES_DIR, 'soundbank.sf2'))
 
-        pin_out_src = self._get_unconnected_pin(file_source_async, PINDIR_OUTPUT)
-        pin_in_parser = self._get_unconnected_pin(midi_parser, PINDIR_INPUT)
-        self._filter_graph.ConnectDirect(pin_out_src, pin_in_parser, None)
+            bass_audio_source_src = bass_audio_source.QueryInterface(IFileSourceFilter)
+            bass_audio_source_src.Load(src_file, None)
 
-        pin_out_parser = self._get_unconnected_pin(midi_parser, PINDIR_OUTPUT)
-        pin_in_renderer = self._get_unconnected_pin(midi_renderer, PINDIR_INPUT)
-        self._filter_graph.ConnectDirect(pin_out_parser, pin_in_renderer, None)
+            # Add DirectSound Audio Renderer
+            directsound_audio_renderer = CreateObject(CLSID_DirectSoundAudioRenderer, interface = IBaseFilter)
+            self._filter_graph.AddFilter(directsound_audio_renderer, 'DirectSound Audio Renderer')
+
+            # Connect Audio Decoder and DirectSound Audio Renderer
+    #        pin_out_audio_decoder = self._get_pin_by_name(audio_decoder, 'Output' if USE_LAV_DECODERS else 'XFrom Out')
+            pin_out_src = self._get_unconnected_pin(bass_audio_source, PINDIR_OUTPUT)
+            pin_in_audio_renderer = self._get_pin_by_name(directsound_audio_renderer, 'Audio Input pin (rendered)')
+            self._filter_graph.ConnectDirect(pin_out_src, pin_in_audio_renderer, None)
+
+            bass_audio_source.AddRef()
+        else:
+            file_source_async = CreateObject(CLSID_FileSourceAsync, interface = IBaseFilter)
+            self._filter_graph.AddFilter(file_source_async, 'FileSourceAsync')
+            file_source_async_src = file_source_async.QueryInterface(IFileSourceFilter)
+            file_source_async_src.Load(src_file, None)
+
+            midi_parser = CreateObject(CLSID_MIDIParser, interface = IBaseFilter)
+            self._filter_graph.AddFilter(midi_parser, 'MIDIParser')
+
+            midi_renderer = CreateObject(CLSID_MIDIRenderer, interface = IBaseFilter)
+            self._filter_graph.AddFilter(midi_renderer, 'MIDIRenderer')
+
+            pin_out_src = self._get_unconnected_pin(file_source_async, PINDIR_OUTPUT)
+            pin_in_parser = self._get_unconnected_pin(midi_parser, PINDIR_INPUT)
+            self._filter_graph.ConnectDirect(pin_out_src, pin_in_parser, None)
+
+            pin_out_parser = self._get_unconnected_pin(midi_parser, PINDIR_OUTPUT)
+            pin_in_renderer = self._get_unconnected_pin(midi_renderer, PINDIR_INPUT)
+            self._filter_graph.ConnectDirect(pin_out_parser, pin_in_renderer, None)
 
         self._has_audio = True
         return True
@@ -483,6 +513,8 @@ class Player():
         if self._is_midi:
             self._build_graph_midi(media_file)
             self._query_interfaces()
+
+            self.set_volume(self._volume)
 
         else:
             if not self._build_graph(media_file):
@@ -763,7 +795,7 @@ class Player():
     def set_volume(self, v: float):
         v = max(0, min(1, v))
         self._volume = v
-        if USE_MASTER_VOLUME or self._is_midi:
+        if USE_MASTER_VOLUME:# or self._is_midi:
             v = int(0xFFFF * v)
             winmm.waveOutSetVolume(0, v | v << 16)
         else:

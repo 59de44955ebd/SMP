@@ -115,7 +115,7 @@ APP_SETTINGS = load_settings()
 
 if APP_SETTINGS.get('single_instance'):
      # Simple single instance implementation
-    hwnd = user32.FindWindowW(APP_CLASS, None)
+    hwnd = user32.FindWindowW(APP_NAME, None)
     if hwnd:
         if len(sys.argv) > 1:
             cds = COPYDATASTRUCT(0, sizeof(WCHAR) * (len(sys.argv[1]) + 1), cast(LPWSTR(sys.argv[1]), LPVOID))
@@ -344,7 +344,7 @@ class App(MainWin):
         }
 
         super().__init__(
-            window_class = APP_CLASS,
+            window_class = APP_NAME,
             window_title = f'{APP_NAME} [{self.engine_name}]',
             class_style = 0,
             ex_style = WS_EX_ACCEPTFILES,
@@ -1234,7 +1234,7 @@ class App(MainWin):
     #
     ########################################
     def action_update_app(self):
-        command = f'"{os.path.join(RES_DIR, "update_app.ps1")}" "{APP_NAME}" {APP_VERSION} "https://github.com/59de44955ebd/{APP_NAME}"'
+        command = f'"{os.path.join(RES_DIR, "update_app.ps1")}" "{APP_NAME}" {APP_MAJORVERSION}.{APP_MINORVERSION} "https://github.com/59de44955ebd/{APP_NAME}"'
         if os.path.isfile(os.path.join(os.path.dirname(sys.executable), 'uninstall.exe')):
             command += f' "{APP_NAME}-x64-setup.exe"'
         shell32.ShellExecuteW(None, None, 'powershell.exe', command, None, SW_HIDE)

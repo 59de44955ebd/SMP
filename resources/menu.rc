@@ -107,7 +107,7 @@ BEGIN
 
   POPUP "&Help"
   BEGIN
-    MENUITEM "&About\tF1",IDM_ABOUT
+    MENUITEM "&About...\tF1",IDM_ABOUT
     MENUITEM SEPARATOR
     MENUITEM "&Check for Updates", IDM_UPDATE_APP
   END

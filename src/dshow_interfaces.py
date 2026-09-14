@@ -1,7 +1,3 @@
-# -*- coding: mbcs -*-
-#typelib_path = 'DirectShow.tlb'
-#_lcid = 0 # change this if required
-
 import os
 import sys
 
@@ -61,21 +57,10 @@ VMR_ARMODE_NONE = 0
 VMR_ARMODE_LETTER_BOX = 1
 _VMR_ASPECT_RATIO_MODE = DWORD
 
-
 ProcAmp_Brightness = 0x1
 ProcAmp_Contrast = 0x2
 ProcAmp_Hue = 0x4
 ProcAmp_Saturation = 0x8
-
-#ProcAmpControl9_Brightness = 0x1
-#ProcAmpControl9_Contrast = 0x2
-#ProcAmpControl9_Hue = 0x4
-#ProcAmpControl9_Saturation = 0x8
-
-#DXVA2_ProcAmp_Brightness = 0x0001
-#DXVA2_ProcAmp_Contrast = 0x0002
-#DXVA2_ProcAmp_Hue = 0x0004
-#DXVA2_ProcAmp_Saturation = 0x0008
 
 # Windows
 CLSID_DirectSoundAudioRenderer  = '{79376820-07D0-11CF-A24D-0020AFD79767}'
@@ -100,6 +85,9 @@ CLSID_VSFilter_autoload		    = '{9852A670-F845-491B-9BE6-EBD841B8A613}'
 
 # MPC Video Renderer
 CLSID_MPCVideoRenderer	        = '{71F080AA-8661-4093-B15E-4F6903E77D0A}'
+
+# Bass Audio Source
+CLSID_BassAudioSource = '{A351970E-4601-4BEC-93DE-CEE7AF64C636}'
 
 # IMediaEvent constants
 #EC_ACTIVATE = 19
@@ -1370,8 +1358,6 @@ IVMRWindowlessControl9._methods_ = [
               ( ['out'], POINTER(COLORREF), 'lpClr' )),
 ]
 
-
-
 class IMFVideoProcessor(IUnknown):
     _case_insensitive_ = True
     _iid_ = GUID('{6AB0000C-FECE-4d1f-A2AC-A9573530656E}')
@@ -1379,70 +1365,32 @@ class IMFVideoProcessor(IUnknown):
 
 IMFVideoProcessor._methods_ = [
 
-#    virtual HRESULT STDMETHODCALLTYPE GetAvailableVideoProcessorModes(
-#        /* [out][in] */ __RPC__inout UINT *lpdwNumProcessingModes,
-#        /* [size_is][size_is][out] */ __RPC__deref_out_ecount_full_opt(*lpdwNumProcessingModes) GUID **ppVideoProcessingModes) = 0;
     COMMETHOD([], HRESULT, 'GetAvailableVideoProcessorModes',
               ( ['in'], POINTER(UINT), 'lpdwNumProcessingModes' ),
               ( ['out'], POINTER(POINTER(GUID)), 'ppVideoProcessingModes' )),
 
-#    virtual HRESULT STDMETHODCALLTYPE GetVideoProcessorCaps(
-#        /* [in] */ __RPC__in LPGUID lpVideoProcessorMode,
-#        /* [out] */ __RPC__out DXVA2_VideoProcessorCaps *lpVideoProcessorCaps) = 0;
     COMMETHOD([], HRESULT, 'GetVideoProcessorCaps',
               ( ['in'], POINTER(GUID), 'lpVideoProcessorMode' ),
               ( ['out'], POINTER(LPVOID), 'lpVideoProcessorCaps' )),
 
-#    virtual HRESULT STDMETHODCALLTYPE GetVideoProcessorMode(
-#        /* [out] */ __RPC__out LPGUID lpMode) = 0;
     COMMETHOD([], HRESULT, 'GetVideoProcessorMode',
               ( ['out'], POINTER(GUID), 'lpMode' )),
 
-#    virtual HRESULT STDMETHODCALLTYPE SetVideoProcessorMode(
-#        /* [in] */ __RPC__in LPGUID lpMode) = 0;
     COMMETHOD([], HRESULT, 'SetVideoProcessorMode',
               ( ['in'], POINTER(GUID), 'lpMode' )),
 
-#    virtual HRESULT STDMETHODCALLTYPE GetProcAmpRange(
-#        DWORD dwProperty,
-#        /* [out] */ __RPC__out DXVA2_ValueRange *pPropRange) = 0;
     COMMETHOD([], HRESULT, 'GetProcAmpRange',
               ( ['in'], DWORD, 'dwProperty' ),
               ( ['out'], POINTER(DXVA2_ValueRange), 'pPropRange' )),
 
-
-#    virtual HRESULT STDMETHODCALLTYPE GetProcAmpValues(
-#        DWORD dwFlags,
-#        /* [out] */ __RPC__out DXVA2_ProcAmpValues *Values) = 0;
     COMMETHOD([], HRESULT, 'GetProcAmpValues',
               ( ['in'], DWORD, 'dwFlags' ),
               ( ['out'], POINTER(DXVA2_ProcAmpValues), 'Values' )),
 
-#    virtual HRESULT STDMETHODCALLTYPE SetProcAmpValues(
-#        DWORD dwFlags,
-#        /* [in] */ __RPC__in DXVA2_ProcAmpValues *pValues) = 0;
     COMMETHOD([], HRESULT, 'SetProcAmpValues',
               ( ['in'], DWORD, 'dwFlags' ),
               ( ['in'], POINTER(DXVA2_ProcAmpValues), 'pValues' )),
-
-#    virtual HRESULT STDMETHODCALLTYPE GetFilteringRange(
-#        DWORD dwProperty,
-#        /* [out] */ __RPC__out DXVA2_ValueRange *pPropRange) = 0;
-#
-#    virtual HRESULT STDMETHODCALLTYPE GetFilteringValue(
-#        DWORD dwProperty,
-#        /* [out] */ __RPC__out DXVA2_Fixed32 *pValue) = 0;
-#
-#    virtual HRESULT STDMETHODCALLTYPE SetFilteringValue(
-#        DWORD dwProperty,
-#        /* [in] */ __RPC__in DXVA2_Fixed32 *pValue) = 0;
-#
-#    virtual HRESULT STDMETHODCALLTYPE GetBackgroundColor(
-#        /* [out] */ __RPC__out COLORREF *lpClrBkg) = 0;
-#
-#    virtual HRESULT STDMETHODCALLTYPE SetBackgroundColor(
-#        COLORREF ClrBkg) = 0;
-
+    # ...
 ]
 
 class IMFGetService(IUnknown):
@@ -1451,12 +1399,18 @@ class IMFGetService(IUnknown):
     _idlflags_ = []
 
 IMFGetService._methods_ = [
-#    virtual HRESULT STDMETHODCALLTYPE GetService(
-#        /* [in] */ __RPC__in REFGUID guidService,
-#        /* [in] */ __RPC__in REFIID riid,
-#        /* [iid_is][out] */ __RPC__deref_out_opt LPVOID *ppvObject) = 0;
     COMMETHOD([], HRESULT, 'GetService',
               ( ['in'], GUID, 'guidService' ),
               ( ['in'], GUID, 'riid' ),
               ( ['out'], POINTER(POINTER(IMFVideoProcessor)), 'ppvObject' )),
+]
+
+class IBassSource2(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{6295DA1C-BE2B-4D8B-9A31-CF811EAADA4B}')
+    _idlflags_ = []
+
+IBassSource2._methods_ = [
+    COMMETHOD([], HRESULT, 'SetSoundfont',
+              ( ['in'], LPCWSTR, 'pSFont' )),
 ]

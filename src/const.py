@@ -1,10 +1,6 @@
 ﻿import os
 import sys
 
-APP_NAME = 'SMP'
-APP_CLASS = 'SMPClass'
-APP_VERSION = '0.2'
-
 IS_FROZEN = getattr(sys, 'frozen', False)
 
 if IS_FROZEN:
