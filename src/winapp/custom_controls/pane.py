@@ -1,7 +1,7 @@
 from ..controls_themed.toolbar import *
 from .splitter import *
 
-PANE_CLASS = "PaneClass"
+PANE_CLASS_NAME = "PaneClass"
 
 EVENT_PANE_CLOSE_REQUESTED = 1
 
@@ -10,12 +10,12 @@ CAPTION_HEIGHT = 23
 
 _window_proc = WNDPROC(user32.DefWindowProcW)
 
-newclass = WNDCLASSEXW()
-newclass.lpfnWndProc = _window_proc
-newclass.style = CS_VREDRAW | CS_HREDRAW
-newclass.lpszClassName = PANE_CLASS
-newclass.hbrBackground = COLOR_3DFACE + 1
-user32.RegisterClassExW(byref(newclass))
+_pane_class = WNDCLASSEXW()
+_pane_class.lpfnWndProc = _window_proc
+_pane_class.style = CS_VREDRAW | CS_HREDRAW
+_pane_class.lpszClassName = PANE_CLASS_NAME
+_pane_class.hbrBackground = COLOR_3DFACE + 1
+user32.RegisterClassExW(byref(_pane_class))
 
 
 class Pane(Window):
@@ -39,7 +39,7 @@ class Pane(Window):
         self.window_title = window_title
 
         super().__init__(
-            PANE_CLASS,
+            PANE_CLASS_NAME,
             style = style,
             ex_style = ex_style,
             window_title = window_title,

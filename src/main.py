@@ -97,7 +97,6 @@ def save_settings(main):
         if main.mediaplayer.is_fullscreen():
             main.mediaplayer.set_fullscreen(False)
 
-#        if user32.IsZoomed(main.hwnd):
         main.show(SW_SHOWNORMAL)
 
         rc = main.get_window_rect()
@@ -218,7 +217,7 @@ class App(MainWin):
         self.auto_resize_to_video = False
         self.single_instance = False
         self.volume = 75
-        self.theme = IDM_THEME_DARK
+        self.theme = THEME_DARK
         self.remember_playlist = False
         self.use_meta_title = False
         self.fullscreen_dblclk = True
@@ -313,9 +312,10 @@ class App(MainWin):
             IDM_LOAD_SUBS:              self.action_load_sub_file,
 
             # View
-            IDM_THEME_AUTO:             lambda: self.action_set_theme(IDM_THEME_AUTO),
-            IDM_THEME_LIGHT:            lambda: self.action_set_theme(IDM_THEME_LIGHT),
-            IDM_THEME_DARK:             lambda: self.action_set_theme(IDM_THEME_DARK),
+            IDM_THEME_AUTO:             lambda: self.action_set_theme(THEME_AUTO),
+            IDM_THEME_LIGHT:            lambda: self.action_set_theme(THEME_LIGHT),
+            IDM_THEME_DARK:             lambda: self.action_set_theme(THEME_DARK),
+
             IDM_FULLSCREEN:             self.action_toggle_fullscreen,
 
             IDM_INTERFACE_MIN:          lambda: self.action_toggle_interface(False),
@@ -384,7 +384,7 @@ class App(MainWin):
 
         flag = MF_BYCOMMAND | MF_CHECKED
 
-        user32.CheckMenuItem(self.h_menu, self.theme, MF_BYCOMMAND | MF_CHECKED)
+        user32.CheckMenuItem(self.h_menu, IDM_THEME_AUTO + self.theme, MF_BYCOMMAND | MF_CHECKED)
         user32.CheckMenuItem(self.h_menu, self.engine, MF_BYCOMMAND | MF_CHECKED)
 
         if self.show_playlist:
@@ -411,7 +411,7 @@ class App(MainWin):
         if not HAS_VLC:
             user32.EnableMenuItem(self.h_menu, IDM_ENGINE_VLC, MF_BYCOMMAND | MF_GRAYED)
 
-        use_dark_mode = self.theme == IDM_THEME_DARK or (self.theme == IDM_THEME_AUTO and reg_should_use_dark_mode())
+        use_dark_mode = self.theme == THEME_DARK or (self.theme == THEME_AUTO and reg_should_use_dark_mode())
 
         self.create_player()
         self.create_seekbar()
@@ -567,16 +567,6 @@ class App(MainWin):
     #
     ########################################
     def handle_dropped_items(self, dropped_items):
-#        if len(dropped_items) > 1 or os.path.isdir(dropped_items[0]):
-#            self.action_close()
-#            self.playlist.handle_dropped_items(dropped_items)
-#            if not self.show_playlist:
-#                self.action_toggle_playlist()
-#            self.playlist.play_next()
-#        elif os.path.isfile(dropped_items[0]):
-#            self.load_media_file(dropped_items[0])
-#        self.activate_window()
-
         media_files = [f for f in dropped_items if os.path.isfile(f)]
         if media_files:
             self.load_media_file(media_files[0])
@@ -722,7 +712,6 @@ class App(MainWin):
         self.video_container = Window(
             window_class = newclass.lpszClassName,
             style = WS_CHILD | WS_VISIBLE,
-#            ex_style = WS_EX_TRANSPARENT | WS_EX_LAYERED,
             parent_window = self
         )
 
@@ -1632,15 +1621,15 @@ class App(MainWin):
     ########################################
     #
     ########################################
-    def action_set_theme(self, idm):
-        user32.CheckMenuItem(self.h_menu, self.theme, MF_BYCOMMAND | MF_UNCHECKED)
-        self.theme = idm
-        user32.CheckMenuItem(self.h_menu, self.theme, MF_BYCOMMAND | MF_CHECKED)
+    def action_set_theme(self, theme):
+        user32.CheckMenuItem(self.h_menu, IDM_THEME_AUTO + self.theme, MF_BYCOMMAND | MF_UNCHECKED)
+        self.theme = theme
+        user32.CheckMenuItem(self.h_menu, IDM_THEME_AUTO + self.theme, MF_BYCOMMAND | MF_CHECKED)
 
-        if idm == IDM_THEME_AUTO:
+        if theme == THEME_AUTO:
             is_dark = reg_should_use_dark_mode()
         else:
-            is_dark = idm == IDM_THEME_DARK
+            is_dark = theme == THEME_DARK
 
         if is_dark != self.is_dark:
             self.apply_theme(is_dark)
@@ -1697,7 +1686,7 @@ class App(MainWin):
             if callback:
                 callback(ok)
             if not ok:
-                return  #self.action_close()
+                return
 
             self.media_file = filename
 
@@ -1942,10 +1931,8 @@ class App(MainWin):
         self.update_time()
         # Detect end reached
         if not self.mediaplayer.is_playing() and not self.is_loop:
-
             if self.playlist.play_next():
                 return
-
             self.timer_stop()
             self.update_ui_player_state(STATE_STOPPED)
 
@@ -1954,12 +1941,8 @@ class App(MainWin):
     ########################################
     def update_time(self, force=False):
         secs = self.mediaplayer.get_time()
-#        print(secs)
         if self.media_duration > 0:
-
-#            self.slider_seek.send_message(TBM_SETPOS, 1, int(SEEK_RANGE * secs / self.media_duration))
             self.slider_seek.set_pos(secs / self.media_duration)
-
         self.update_counter += 1
         if force or self.update_counter % TIME_DISPLAY_UPDATE_STATUS_EVERY == 0:
             self.update_time_display(secs)

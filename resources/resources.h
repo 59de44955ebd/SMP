@@ -77,6 +77,7 @@
 #define IDM_THEME_AUTO 600
 #define IDM_THEME_LIGHT 601
 #define IDM_THEME_DARK 602
+
 #define IDM_FULLSCREEN 603
 //#define IDM_PIP 604
 

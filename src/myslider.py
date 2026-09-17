@@ -2,6 +2,7 @@
 from winapp.themes import *
 from winapp.controls_themed.tooltips import *
 
+SLIDER_CLASS_NAME = 'SliderClass'
 
 EVENT_POS_CHANGED = 1
 
@@ -16,17 +17,15 @@ DARK_BORDER_BRUSH = gdi32.CreateSolidBrush(0)
 
 KNOB_BRUSH = gdi32.CreateSolidBrush(0xD77800)
 
-CLASS_NAME = 'SliderClass'
-
 _windowproc = WNDPROC(user32.DefWindowProcW)
 
-slider_class = WNDCLASSEXW()
-slider_class.lpfnWndProc = _windowproc
-slider_class.style = CS_VREDRAW | CS_HREDRAW | CS_GLOBALCLASS
-slider_class.lpszClassName = CLASS_NAME
-slider_class.hbrBackground = SLIDER_BG_BRUSH
-slider_class.hCursor = user32.LoadCursorW(0, IDC_ARROW)
-user32.RegisterClassExW(byref(slider_class))
+_slider_class = WNDCLASSEXW()
+_slider_class.lpfnWndProc = _windowproc
+_slider_class.style = CS_VREDRAW | CS_HREDRAW | CS_GLOBALCLASS
+_slider_class.lpszClassName = SLIDER_CLASS_NAME
+_slider_class.hbrBackground = SLIDER_BG_BRUSH
+_slider_class.hCursor = user32.LoadCursorW(0, IDC_ARROW)
+user32.RegisterClassExW(byref(_slider_class))
 
 
 ########################################
@@ -58,7 +57,7 @@ class MySlider(Window):
         self.is_down = False
 
         super().__init__(
-            CLASS_NAME,
+            SLIDER_CLASS_NAME,
             style = style,
             ex_style = ex_style,
             parent_window = parent_window,

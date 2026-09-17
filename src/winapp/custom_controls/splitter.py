@@ -1,21 +1,26 @@
 ﻿from ..window import *
 from ..themes import *
 
+SPLITTER_CLASS_NAME = 'SplitterClass'
 SPLITTER_SIZE = 4
 
 EVENT_SPLITTER_MOVING_STARTED = 2
 EVENT_SPLITTER_MOVED = 0
 EVENT_SPLITTER_MOVING = 1
 
-#SPLITTER_BRUSH_LIGHT = gdi32.CreateSolidBrush(0xF3F3F3)  # COLOR_3DFACE + 1
-#SPLITTER_BRUSH_DARK = DARK_BG_BRUSH
+SPLITTER_BG_BRUSH = COLOR_3DFACE + 1
+SPLITTER_BG_BRUSH_DARK = DARK_BG_BRUSH
 
 SPLITTER_BRUSH_MOVING = gdi32.CreateSolidBrush(0x808080)
 
-def _window_proc_callback(hwnd, msg, wparam, lparam):
-    return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
+_window_proc = WNDPROC(user32.DefWindowProcW)
 
-_window_proc = WNDPROC(_window_proc_callback)
+_splitter_class = WNDCLASSEXW()
+_splitter_class.lpfnWndProc = _window_proc
+#        _splitter_class.style = CS_VREDRAW | CS_HREDRAW
+_splitter_class.lpszClassName = SPLITTER_CLASS_NAME
+_splitter_class.hbrBackground = COLOR_3DFACE + 1
+user32.RegisterClassExW(byref(_splitter_class))
 
 
 ########################################
@@ -30,28 +35,16 @@ class Splitter(Window):
         initial_pos = 0,
         is_vertical = False,
         is_reversed = False,
-        bg_brush = COLOR_3DFACE + 1,
-        bg_brush_dark = DARK_BG_BRUSH
     ):
         self.pos = initial_pos
         self.is_vertical = is_vertical
         self.is_reversed = is_reversed
-        self.bg_brush = bg_brush
-        self.bg_brush_dark = bg_brush_dark
-
         self.x = 0
         self.y = 0
-
-        newclass = WNDCLASSEXW()
-        newclass.lpfnWndProc = _window_proc
-#        newclass.style = CS_VREDRAW | CS_HREDRAW
-        newclass.lpszClassName = 'SplitterClass'
-        newclass.hbrBackground = bg_brush
-        newclass.hCursor = user32.LoadCursorW(0, IDC_SIZENS if is_vertical else IDC_SIZEWE)
-        user32.RegisterClassExW(byref(newclass))
+        self.h_cursor = user32.LoadCursorW(0, IDC_SIZENS if is_vertical else IDC_SIZEWE)
 
         super().__init__(
-            newclass.lpszClassName,
+            SPLITTER_CLASS_NAME,
             style = style,
             ex_style = WS_EX_TOOLWINDOW,
             parent_window = parent_window,
@@ -127,7 +120,7 @@ class Splitter(Window):
                 self.pos = self.rc_parent.right - self.rc_parent.left - pt.x if self.is_reversed else pt.x
 
             user32.SetParent(self.hwnd, parent_window.hwnd)
-            user32.SetClassLongPtrW(self.hwnd, GCLP_HBRBACKGROUND, self.bg_brush_dark if self.is_dark else self.bg_brush)
+            user32.SetClassLongPtrW(self.hwnd, GCLP_HBRBACKGROUND, SPLITTER_BG_BRUSH_DARK if self.is_dark else SPLITTER_BG_BRUSH)
             user32.SetWindowPos(self.hwnd, 0, pt.x, pt.y, 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE)
 
             self.emit(EVENT_SPLITTER_MOVED)
@@ -135,12 +128,21 @@ class Splitter(Window):
         self.register_message_callback(WM_LBUTTONDOWN, _on_WM_LBUTTONDOWN)
         self.parent_window.register_message_callback(WM_LBUTTONUP, _on_WM_LBUTTONUP)
 
+        ########################################
+        #
+        ########################################
+        def _on_WM_SETCURSOR(hwnd, wparam, lparam):
+            user32.SetCursor(self.h_cursor)
+            return TRUE
+
+        self.register_message_callback(WM_SETCURSOR, _on_WM_SETCURSOR)
+
     ########################################
     #
     ########################################
     def apply_theme(self, is_dark):
         self.is_dark = is_dark
-        user32.SetClassLongPtrW(self.hwnd, GCLP_HBRBACKGROUND, self.bg_brush_dark if self.is_dark else self.bg_brush)
+        user32.SetClassLongPtrW(self.hwnd, GCLP_HBRBACKGROUND, SPLITTER_BG_BRUSH_DARK if self.is_dark else SPLITTER_BG_BRUSH)
 
     ########################################
     #
