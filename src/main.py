@@ -43,8 +43,9 @@ def load_settings() -> dict:
         cbData = DWORD(sizeof(data))
         # bool
         for prop in (
-            'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist', 'stayontop', 'minimize_to_tray', 'auto_resize_to_video',
-            'single_instance', 'remember_playlist', 'use_meta_title'
+            'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist', 'stayontop',
+            'minimize_to_tray', 'auto_resize_to_video', 'single_instance', 'remember_playlist', 'use_meta_title',
+            'fullscreen_dblclk'
         ):
             if advapi32.RegQueryValueExW(hkey, prop, None, None, byref(data), byref(cbData)) == ERROR_SUCCESS:
                 settings[prop] = cast(data, POINTER(DWORD)).contents.value == 1
@@ -85,8 +86,9 @@ def save_settings(main):
         dwsize = sizeof(DWORD)
         # int / bool
         for prop in (
-            'engine', 'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist', 'theme', 'volume', 'stayontop', 'minimize_to_tray',
-            'auto_resize_to_video', 'single_instance', 'remember_playlist', 'use_meta_title'
+            'engine', 'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist',
+            'theme', 'volume', 'stayontop', 'minimize_to_tray', 'auto_resize_to_video', 'single_instance',
+            'remember_playlist', 'use_meta_title', 'fullscreen_dblclk'
         ):
             advapi32.RegSetValueExW(hkey, prop, 0, REG_DWORD, byref(DWORD(int(getattr(main, prop)))), dwsize)
 
@@ -219,6 +221,7 @@ class App(MainWin):
         self.theme = IDM_THEME_DARK
         self.remember_playlist = False
         self.use_meta_title = False
+        self.fullscreen_dblclk = True
 
         if 'rect' in APP_SETTINGS:
             left, top, width, height = eval(APP_SETTINGS['rect'])
@@ -334,6 +337,7 @@ class App(MainWin):
             IDM_SINGLE_INSTANCE:        self.action_toggle_single_instance,
             IDM_REMEMBER_PLAYLIST:      self.action_toggle_remember_playlist,
             IDM_USE_META_TITLE:         self.action_toggle_use_meta_title,
+            IDM_FULLSCREEN_DBLCLK:      self.action_toggle_fullscreen_dblclk,
 
             # Help
             IDM_UPDATE_APP:             self.action_update_app,
@@ -394,12 +398,12 @@ class App(MainWin):
             user32.CheckMenuItem(self.h_menu, IDM_AUTO_RESIZE_TO_VIDEO, flag)
         if self.single_instance:
             user32.CheckMenuItem(self.h_menu, IDM_SINGLE_INSTANCE, flag)
-#        if self.show_subtitles:
-#            user32.CheckMenuItem(self.h_menu, IDM_SHOW_SUBTITLES, flag)
         if self.remember_playlist:
             user32.use_meta_title(self.h_menu, IDM_REMEMBER_PLAYLIST, flag)
         if self.use_meta_title:
             user32.CheckMenuItem(self.h_menu, IDM_USE_META_TITLE, flag)
+        if self.fullscreen_dblclk:
+            user32.CheckMenuItem(self.h_menu, IDM_FULLSCREEN_DBLCLK, flag)
 
         if not HAS_DIRECTSHOW:
             user32.EnableMenuItem(self.h_menu, IDM_ENGINE_DIRECTSHOW, MF_BYCOMMAND | MF_GRAYED)
@@ -754,7 +758,9 @@ class App(MainWin):
         #
         ########################################
         def _on_WM_LBUTTONDBLCLK(hwnd, wparam, lparam):
-            self.action_toggle_fullscreen()
+            if self.fullscreen_dblclk:
+                self.action_toggle_fullscreen()
+                _on_WM_LBUTTONDOWN(hwnd, wparam, lparam)
 
         self.video_container.register_message_callback(WM_LBUTTONDBLCLK, _on_WM_LBUTTONDBLCLK)
 
@@ -1249,19 +1255,40 @@ class App(MainWin):
         ########################################
         #
         ########################################
+        def _pos_changed(pos, k):
+            hi = round(200 * pos)
+            self.color_values[k] = hi
+            getattr(self.mediaplayer, f'set_{k}')((hi - 100) / 100)  # -1..1
+            user32.SetWindowTextW(statics[k], str(hi - 100))  # -100 .. 100
+
+        ########################################
+        #
+        ########################################
         def _dialog_proc_color_controls(hwnd, msg, wparam, lparam):
             if msg == WM_INITDIALOG:
+                for i, k in enumerate(['brightness', 'contrast', 'hue', 'saturation']):
+                    hwnd_slider = user32.GetDlgItem(hwnd, [IDC_CC_TRACKBAR_BRIGHTNESS, IDC_CC_TRACKBAR_CONTRAST, IDC_CC_TRACKBAR_HUE, IDC_CC_TRACKBAR_SATURATION][i])
+                    rc = RECT()
+                    user32.GetWindowRect(hwnd_slider, byref(rc))
+                    user32.MapWindowPoints(None, hwnd, byref(rc), 2)
+                    slider = MySlider(
+                        wrap_hwnd = hwnd_slider,
+                        left = rc.left, top = rc.top,
+                        width = rc.right - rc.left, height = rc.bottom - rc.top,
+                    )
+                    sliders[k] = slider
+                    slider.set_pos(self.color_values[k] / 200)
+                    slider.connect(EVENT_POS_CHANGED, lambda pos, k=k: _pos_changed(pos, k))
+                    statics[k] = user32.GetDlgItem(hwnd, [IDC_CC_STATIC_BRIGHTNESS, IDC_CC_STATIC_CONTRAST, IDC_CC_STATIC_HUE, IDC_CC_STATIC_SATURATION][i])
+                    user32.SetWindowTextW(statics[k], str(self.color_values[k] - 100))
+
                 if self.is_dark:
                     dwm_use_dark_mode(hwnd, True)
                     uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDC_BTN_RESET), 'DarkMode_Explorer', None)
                     uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDCANCEL), 'DarkMode_Explorer', None)
-                for i, k in enumerate(['brightness', 'contrast', 'hue', 'saturation']):
-                    hwnd_slider = user32.GetDlgItem(hwnd, [IDC_CC_TRACKBAR_BRIGHTNESS, IDC_CC_TRACKBAR_CONTRAST, IDC_CC_TRACKBAR_HUE, IDC_CC_TRACKBAR_SATURATION][i])
-                    user32.SendMessageW(hwnd_slider, TBM_SETRANGEMAX, FALSE, 200)
-                    user32.SendMessageW(hwnd_slider, TBM_SETPOS, TRUE, self.color_values[k])
-                    sliders[k] = hwnd_slider
-                    statics[k] = user32.GetDlgItem(hwnd, [IDC_CC_STATIC_BRIGHTNESS, IDC_CC_STATIC_CONTRAST, IDC_CC_STATIC_HUE, IDC_CC_STATIC_SATURATION][i])
-                    user32.SetWindowTextW(statics[k], str(self.color_values[k] - 100))
+                    for slider in sliders.values():
+                        slider.apply_theme(True)
+
                 center_window(hwnd, self.hwnd)
 
             elif msg == WM_COMMAND:
@@ -1269,36 +1296,14 @@ class App(MainWin):
                 command = HIWORD(wparam)
                 if command == BN_CLICKED:
                     if control_id == IDC_BTN_RESET:
-                        for k, hwnd_slider in sliders.items():
+                        for k, slider in sliders.items():
                             self.color_values[k] = 100
                             getattr(self.mediaplayer, f'set_{k}')(0)
-                            user32.SendMessageW(hwnd_slider, TBM_SETPOS, TRUE, 100)
+                            slider.set_pos(.5)
                             user32.SetWindowTextW(statics[k], '0')
 
                     elif control_id == IDCANCEL:
                         user32.EndDialog(hwnd, 0)
-
-            elif msg == WM_HSCROLL:
-                lo, hi, = wparam & 0xFFFF, (wparam >> 16) & 0xFFFF
-                if lo == TB_ENDTRACK:
-                    return 0
-
-                if lo == TB_PAGEDOWN or lo == TB_PAGEUP:  # Click on slider
-                    pt = POINT()
-                    user32.GetCursorPos(byref(pt))
-                    rc = RECT()
-                    user32.GetWindowRect(lparam, byref(rc))
-                    hi = int((pt.x - rc.left - 10) / (rc.right - rc.left - 20) * 200)
-                    user32.SendMessageW(lparam, TBM_SETPOS, TRUE, hi)
-
-                elif lo == TB_THUMBTRACK or lo == TB_THUMBPOSITION:
-                    hi = SHORT(hi).value
-
-                idx = list(sliders.values()).index(lparam)
-                k = list(sliders.keys())[idx]
-                self.color_values[k] = hi
-                getattr(self.mediaplayer, f'set_{k}')((hi - 100) / 100)  # -1..1
-                user32.SetWindowTextW(statics[k], str(hi - 100))  # -100 .. 100
 
             elif self.is_dark:
                 if msg == WM_CTLCOLORDLG:
@@ -1595,6 +1600,13 @@ class App(MainWin):
                except:
                     pass
             self.set_window_text(f'{os.path.basename(self.media_file)} - {APP_NAME} [{self.engine_name}]')
+
+    ########################################
+    #
+    ########################################
+    def action_toggle_fullscreen_dblclk(self):
+        self.fullscreen_dblclk = not self.fullscreen_dblclk
+        self.check_menu_item(IDM_FULLSCREEN_DBLCLK, self.fullscreen_dblclk)
 
     ########################################
     #

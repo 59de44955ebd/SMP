@@ -7210,6 +7210,10 @@ TBS_TRANSPARENTBKGND    = 0x1000
 #TRBN_FIRST = -1501
 #TRBN_THUMBPOSCHANGING = TRBN_FIRST - 1
 
+TBCD_TICS = 1
+TBCD_THUMB = 2
+TBCD_CHANNEL = 3
+
 ########################################
 # TreeView
 ########################################

@@ -90,7 +90,7 @@ BEGIN
 
   POPUP "&Options"
   BEGIN
-    POPUP "&Media Engine"
+    POPUP "Media &Engine"
     BEGIN
       MENUITEM "&DirectShow",IDM_ENGINE_DIRECTSHOW
       MENUITEM "&VLC",IDM_ENGINE_VLC
@@ -103,6 +103,7 @@ BEGIN
     MENUITEM "&Single Instance",IDM_SINGLE_INSTANCE
     MENUITEM "&Remember last Playlist",IDM_REMEMBER_PLAYLIST
     MENUITEM "Show &Media Title in Title Bar",IDM_USE_META_TITLE
+    MENUITEM "&Fullscreen by Double Click",IDM_FULLSCREEN_DBLCLK
   END
 
   POPUP "&Help"

@@ -5,6 +5,9 @@ from winapp.controls_themed.tooltips import *
 
 EVENT_POS_CHANGED = 1
 
+SLIDER_BG_BRUSH = COLOR_3DFACE + 1
+SLIDER_BG_BRUSH_DARK = gdi32.CreateSolidBrush(0x171717)
+
 BAR_BRUSH = gdi32.CreateSolidBrush(0xFFD0A0)  #0xDBCDBF)  #F2E1D5)
 BAR_BRUSH_DARK = DARK_CONTROL_BG_BRUSH  #gdi32.CreateSolidBrush(0xD77800)  #0xB16B25)  #B76E25)  # HIGHLIGHT_BRUSH
 
@@ -13,7 +16,17 @@ DARK_BORDER_BRUSH = gdi32.CreateSolidBrush(0)
 
 KNOB_BRUSH = gdi32.CreateSolidBrush(0xD77800)
 
+CLASS_NAME = 'SliderClass'
+
 _windowproc = WNDPROC(user32.DefWindowProcW)
+
+slider_class = WNDCLASSEXW()
+slider_class.lpfnWndProc = _windowproc
+slider_class.style = CS_VREDRAW | CS_HREDRAW | CS_GLOBALCLASS
+slider_class.lpszClassName = CLASS_NAME
+slider_class.hbrBackground = SLIDER_BG_BRUSH
+slider_class.hCursor = user32.LoadCursorW(0, IDC_ARROW)
+user32.RegisterClassExW(byref(slider_class))
 
 
 ########################################
@@ -26,41 +39,30 @@ class MySlider(Window):
     ########################################
     def __init__(
         self,
-        parent_window,
+        parent_window = None,
         style = WS_CHILD | WS_VISIBLE,
         ex_style = WS_EX_COMPOSITED,
         left = 0, top = 0, width = 0, height = 0,
+        wrap_hwnd = None,
         initial_pos = 0,
         show_knob = False,
         show_text = False,
         show_tooltip = False,
-        bg_brush = COLOR_3DFACE + 1,
-        bg_brush_dark = gdi32.CreateSolidBrush(0x171717),
     ):
-        self.bg_brush = bg_brush
-        self.bg_brush_dark = bg_brush_dark
         self.pos = initial_pos
         self.width = width
         self.height = height
-
-        self.is_down = False
-
         self.show_knob = show_knob
         self.show_text = show_text
 
-        newclass = WNDCLASSEXW()
-        newclass.lpfnWndProc = _windowproc
-        newclass.style = CS_VREDRAW | CS_HREDRAW
-        newclass.lpszClassName = 'SliderClass'
-        newclass.hbrBackground = bg_brush
-        newclass.hCursor = user32.LoadCursorW(0, IDC_ARROW)
-        user32.RegisterClassExW(byref(newclass))
+        self.is_down = False
 
         super().__init__(
-            newclass.lpszClassName,
+            CLASS_NAME,
             style = style,
             ex_style = ex_style,
             parent_window = parent_window,
+            wrap_hwnd = wrap_hwnd,
             left = left, top = top, width = width, height = height,
         )
 
@@ -157,7 +159,7 @@ class MySlider(Window):
     ########################################
     def apply_theme(self, is_dark):
         super().apply_theme(is_dark)
-        user32.SetClassLongPtrW(self.hwnd, GCL_HBRBACKGROUND, self.bg_brush_dark if is_dark else self.bg_brush)
+        user32.SetClassLongPtrW(self.hwnd, GCL_HBRBACKGROUND, SLIDER_BG_BRUSH_DARK if is_dark else SLIDER_BG_BRUSH)
 
     ########################################
     #
