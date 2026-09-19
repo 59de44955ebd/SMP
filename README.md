@@ -6,6 +6,8 @@ SMP is a simple desktop media player for Windows 11 x64 written in Python. What 
 
 The application comes initially only with the `webview` engine (and the `vlc` engine, if a VLC media player is found on the PC), other engines are automatically downloaded (from [here](https://github.com/59de44955ebd/SMP/releases/tag/engines)) when first selected.
 
+The player's UI is (quite obviously) inspired by [MPC-HC](https://github.com/clsid2/mpc-hc), whereas the main menus are closer to the [VLC media player](https://www.videolan.org/).
+
 ## MultiMedia Engines
 
 ### 1. directshow
@@ -32,6 +34,6 @@ This engine supports less features, container formats and codecs than the other 
 
 ## MIDI Support
 
-All engines support playing MIDI files (`.mid` `.rmi` `.kar`). All but mpv use an external [SoundFont](https://en.wikipedia.org/wiki/SoundFont) file as soundbank. To keep the player's download file size small, only a [small SoundFont](https://musical-artifacts.com/artifacts/5190) (3 MB, based on GM.dls that comes with Windows) is included as file `soundbank.sf2` in the `data` folder. For achieving better MIDI sound quality you can replace this file with a high-quality SoundFont file like e.g. [FluidR3_GM.sf2](https://musical-artifacts.com/artifacts/738) (141 MB) or [Reality_GMGS_falcomod.sf2](https://www.musical-artifacts.com/artifacts/6003) (34 MB). After downloading such a file, just rename it `soundbank.sf2` and put it into `data`.
+All engines support playing MIDI files (`.mid` `.rmi` `.kar`). All but `mpv` use an external [SoundFont](https://en.wikipedia.org/wiki/SoundFont) file as soundbank. To keep the player's download file size small, only a [small SoundFont](https://musical-artifacts.com/artifacts/5190) (3 MB, based on GM.dls that comes with Windows) is included as file `soundbank.sf2` in the `data` folder. For achieving better MIDI sound quality you can replace this file with a high-quality SoundFont file like e.g. [FluidR3_GM.sf2](https://musical-artifacts.com/artifacts/738) (141 MB) or [Reality_GMGS_falcomod.sf2](https://www.musical-artifacts.com/artifacts/6003) (34 MB). After downloading such a file, just rename it `soundbank.sf2` and put it into `data`.
 
 If you happen to be a MIDI nerd, engine `webview` is the only one that supports the rather exotic but interesting [SF2 RMIDI](https://github.com/spessasus/sf2-rmidi-specification) file format that allows to combine MIDI and soundbank data in a single `.rmi` file.
