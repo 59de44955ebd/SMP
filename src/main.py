@@ -27,7 +27,7 @@ except:
     APP_SETTINGS = {}
 
 if APP_SETTINGS.get('single_instance', False):
-     # Simple single instance implementation
+    # Simple single instance implementation
     hwnd = user32.FindWindowW(APP_NAME, None)
     if hwnd:
         if len(sys.argv) > 1:
@@ -95,9 +95,7 @@ class App(MainWin):
     #
     ########################################
     def __init__(self):
-
-        # Default settings
-        self.auto_resize_to_video = APP_SETTINGS.get('auto_resize_to_video', False)
+        self.auto_resize_to_video = APP_SETTINGS.get('auto_resize_to_video', True)
         self.color_values = APP_SETTINGS.get('color_values', {k: 100 for k in COLOR_KEYS})
         self.fullscreen_dblclk = APP_SETTINGS.get('fullscreen_dblclk', True)
         self.minimize_to_tray = APP_SETTINGS.get('minimize_to_tray', False)
@@ -464,10 +462,10 @@ class App(MainWin):
         self.slider_seek.set_window_pos(3, height + 3, width - 6, self.slider_seek.height)
 
         # Reposition mute button
-        self.static_mute.set_window_pos(width - self.slider_volume.width - 16 - 12, 7, flags = SWP_NOSIZE)
+        self.static_mute.set_window_pos(width - self.slider_volume.width - 28, 7, flags = SWP_NOSIZE)
 
         # Reposition volume trackbar
-        self.slider_volume.set_window_pos(width - self.slider_volume.width - 3, 6 + 1, flags = SWP_NOSIZE)
+        self.slider_volume.set_window_pos(width - self.slider_volume.width - 3, 7, flags = SWP_NOSIZE)
 
         if self.pane.visible:
             x = max(0, width - self.pane.splitter.pos)
@@ -500,10 +498,8 @@ class App(MainWin):
         rc_win = self.get_window_rect()
         rc_win_client = self.get_client_rect()
         self.ui_width = rc_win.right - rc_win.left - rc_win_client.right  # window frame
-
         if self.show_playlist:
             self.ui_width += self.pane.splitter.pos
-
         self.ui_height = rc_win.bottom - rc_win.top - rc_win_client.bottom  # title bar, menu, window frame
         if self.show_seek:
             self.ui_height += (self.slider_seek.height + 6)
@@ -512,7 +508,6 @@ class App(MainWin):
         if self.show_status:
             self.ui_height += self.statusbar.height
         self.min_tracksize.y = self.ui_height
-
         if force:
             # Triggers WM_GETMINMAXINFO
             self.set_window_pos(
@@ -525,7 +520,6 @@ class App(MainWin):
     #
     ########################################
     def action_set_engine(self, idm):
-
         ########################################
         #
         ########################################
@@ -545,7 +539,6 @@ class App(MainWin):
             (idm == IDM_ENGINE_MPV and not HAS_MPV) or
             (idm == IDM_ENGINE_VLC and not HAS_VLC)
         ):
-
             ########################################
             #
             ########################################
@@ -566,17 +559,14 @@ class App(MainWin):
                             user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), 'Please be patient...')
                             user32.EnableWindow(user32.GetDlgItem(hwnd, IDOK), FALSE)
                             user32.EnableWindow(user32.GetDlgItem(hwnd, IDCANCEL), FALSE)
-
-                            engine_name = ENGINES[idm].lower()
+                            engine_name = ENGINES[idm]
                             engine_dir = os.path.join(APP_DIR, f'engine_{engine_name}')
                             exit_code = self.download_engine(engine_name)
-
                             if exit_code != 0 or not os.path.isdir(engine_dir):
                                 user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), 'Server not found.\n\nPlease check your internet connection or try again later.')
                                 user32.EnableWindow(user32.GetDlgItem(hwnd, IDOK), TRUE)
                                 user32.EnableWindow(user32.GetDlgItem(hwnd, IDCANCEL), TRUE)
                                 return FALSE
-
                             user32.EndDialog(hwnd, 0)
                             _set_and_restart()
                         else:
@@ -633,9 +623,7 @@ class App(MainWin):
     #
     ########################################
     def create_player(self):
-
         self._windowproc_player = WNDPROC(user32.DefWindowProcW)
-
         newclass = WNDCLASSEXW()
         newclass.lpfnWndProc = self._windowproc_player
         newclass.style = CS_DBLCLKS  # CS_VREDRAW | CS_HREDRAW #|
@@ -694,7 +682,6 @@ class App(MainWin):
     #
     ########################################
     def create_seekbar(self):
-
         self.slider_seek = MySlider(self, height = 16, show_knob = True, show_tooltip = True)
 
         ########################################
@@ -733,7 +720,6 @@ class App(MainWin):
             hide_text = True,
         )
         self.toolbar.height += 8
-
         self.toolbar.send_message(TB_SETPADDING, 0, MAKELONG(10, 11))
         self.toolbar.send_message(TB_SETINDENT, 4, 0)
 
@@ -824,7 +810,6 @@ class App(MainWin):
     #
     ########################################
     def create_playlist(self, splitter_pos):
-
         self.pane = Pane(
             self,
             window_title = 'Playlist',
@@ -879,7 +864,6 @@ class App(MainWin):
             self.update_min_size()
 
         self.pane.connect(EVENT_PANE_CLOSE_REQUESTED, _on_pane_closed)
-
         self.playlist.connect(EVENT_PLAYLIST_HAS_ITEMS_CHANGED, self.update_ui_has_playlist)
         self.playlist.connect(EVENT_PLAYLIST_ACTIVE_ITEM_REMOVED, self.action_close)
 
@@ -887,10 +871,6 @@ class App(MainWin):
         #
         ########################################
         def _load_playlist_item(media_item):
-#            if media_item.invalid:
-#                self.action_close()
-#                return
-
             ########################################
             #
             ########################################
@@ -916,7 +896,6 @@ class App(MainWin):
             self.mediaplayer.play()
             self.timer_start()
             state = STATE_PLAYING
-
         self.update_ui_player_state(state)
 
     ########################################
@@ -955,7 +934,6 @@ class App(MainWin):
     #
     ########################################
     def action_open_url(self):
-
         ########################################
         #
         ########################################
@@ -1064,26 +1042,21 @@ class App(MainWin):
         self.media_file = None
         self.media_duration = 0
         self.mediaplayer.close_file()
-
         txt = f'{APP_NAME} [{self.engine}]'
         self.set_window_text(txt)
         self.trayicon.set_tooltip(txt)
-
         self.statusbar.set_text('Closed', IDX_STATUSBAR_PART_STATE)
         self.statusbar.set_text('', IDX_STATUSBAR_PART_TIME)
-
         self.update_ui_reset()
 
     ########################################
     #
     ########################################
     def action_about(self):
-
         ########################################
         #
         ########################################
         def _dialog_proc_about(hwnd, msg, wparam, lparam):
-
             if msg == WM_INITDIALOG:
                 if self.is_dark:
                     dwm_use_dark_mode(hwnd, True)
@@ -1154,7 +1127,6 @@ class App(MainWin):
     ########################################
     def action_change_volume(self, step):
         self.volume = max(0, min(100, self.volume + step))
-#        self.slider_volume.send_message(TBM_SETPOS, 1, self.volume)
         self.slider_volume.set_pos(self.volume / 100)
         if not self.is_mute:
             self.mediaplayer.set_volume(self.volume / 100)
@@ -1214,7 +1186,6 @@ class App(MainWin):
                         user32.ShowWindow(statics[k], SW_HIDE)
                         user32.ShowWindow(user32.GetDlgItem(hwnd, IDC_CC_LABEL_GAMMA), SW_HIDE)
                         continue
-
                     rc = RECT()
                     user32.GetWindowRect(hwnd_slider, byref(rc))
                     user32.MapWindowPoints(None, hwnd, byref(rc), 2)
@@ -1279,7 +1250,6 @@ class App(MainWin):
     #
     ########################################
     def action_show_media_infos(self):
-
         class ctx:
             pass
 
@@ -1292,7 +1262,6 @@ class App(MainWin):
         #
         ########################################
         def _dialog_proc_media_infos(hwnd, msg, wparam, lparam):
-
             if msg == WM_INITDIALOG:
                 ctx.hwnd_edit = user32.GetDlgItem(hwnd, IDC_EDIT_FILENAME)
                 if self.is_dark:
@@ -1582,24 +1551,19 @@ class App(MainWin):
         user32.CheckMenuItem(self.h_menu, IDM_THEME_AUTO + self.theme, MF_BYCOMMAND | MF_UNCHECKED)
         self.theme = theme
         user32.CheckMenuItem(self.h_menu, IDM_THEME_AUTO + self.theme, MF_BYCOMMAND | MF_CHECKED)
-
         if theme == THEME_AUTO:
             is_dark = reg_should_use_dark_mode()
         else:
             is_dark = theme == THEME_DARK
-
         if is_dark != self.is_dark:
             self.apply_theme(is_dark)
-
             if self.is_dark:
                 self.bitmap_volume = user32.LoadImageW(HMOD_RESOURCES, MAKEINTRESOURCEW(IDB_VOLUME_DARK), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION)
                 self.bitmap_volume_mute = user32.LoadImageW(HMOD_RESOURCES, MAKEINTRESOURCEW(IDB_VOLUME_MUTE_DARK), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION)
             else:
                 self.bitmap_volume = user32.LoadImageW(HMOD_RESOURCES, MAKEINTRESOURCEW(IDB_VOLUME), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION)
                 self.bitmap_volume_mute = user32.LoadImageW(HMOD_RESOURCES, MAKEINTRESOURCEW(IDB_VOLUME_MUTE), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION)
-
             self.static_mute.send_message(STM_SETIMAGE, IMAGE_BITMAP, self.bitmap_volume_mute if self.is_mute else self.bitmap_volume)
-
             self.toolbar.redraw_window()
 
     ########################################
@@ -1616,10 +1580,8 @@ class App(MainWin):
     #
     ########################################
     def load_media_file(self, filename, caption=None, callback=None):
-        had_media = self.media_file is not None
-        if had_media:
+        if self.media_file is not None:
             self.action_close()
-
         is_url = '://' in filename
         if not is_url:
             ext = os.path.splitext(filename)[1].lower()
@@ -1640,25 +1602,18 @@ class App(MainWin):
                 callback(ok)
             if not ok:
                 return
-
             self.media_file = filename
-
             txt = f'{caption if caption else os.path.basename(filename)}'
             self.set_window_text(txt)
             self.trayicon.set_tooltip(txt)
-
             self.update_counter = 0
-
             self.media_duration = self.mediaplayer.get_duration()
             self.update_time_format()
-
             has_video = self.mediaplayer.has_video()
             if has_video:
                 w, h = self.mediaplayer.get_size()
-
                 if self.auto_resize_to_video and not is_url and not user32.IsZoomed(self.hwnd):
                     self.set_window_pos(width = self.ui_width + w, height = self.ui_height + h, flags = SWP_NOMOVE)
-
                 self._active_sub_track_id = None
                 sub_tracks = self.mediaplayer.get_sub_tracks()
                 if sub_tracks:
@@ -1671,9 +1626,7 @@ class App(MainWin):
                         user32.AppendMenuW(self.h_menu_sub_tracks, MF_STRING | (MF_CHECKED if enabled else 0), idm, name)
                         if enabled:
                             self._active_sub_track_id = track_id
-
                     user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_ENABLED)
-
                 if self.engine != 'webview':
                     self._active_video_track_id = None
                     video_tracks = self.mediaplayer.get_video_tracks()
@@ -1686,23 +1639,16 @@ class App(MainWin):
                             if enabled:
                                 self._active_video_track_id = track_id
                         user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_VIDEO), 0, MF_BYPOSITION | MF_ENABLED)
-
             self.mediaplayer.play()
             self.timer_start()
-
             self.update_ui_has_media(has_video, self.media_duration > 0, is_url)
-
-#            if not was_playing:
             self.update_ui_player_state(STATE_PLAYING)
-
             if self.use_meta_title and caption is None:
                 try:
                     meta = json.loads(pymediainfo.MediaInfo.parse(self.media_file, output='JSON', full=False, cover_data=False))
                     self.set_window_text(f'{meta["media"]["track"][0]["Title"]}')
                 except:
                     pass
-
-
             if self.engine != 'webview':
                 self._active_audio_track_id = None
                 audio_tracks = self.mediaplayer.get_audio_tracks()
@@ -1715,7 +1661,6 @@ class App(MainWin):
                         if enabled:
                             self._active_audio_track_id = track_id
                     user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_AUDIO), 0, MF_BYPOSITION | MF_ENABLED)
-
         # Make the callback return immediately (needed for VLC)
         self.mediaplayer.load_media_file(filename, on_parsed = lambda ok: self.create_timer(lambda: _on_parsed(ok), 0, True))
 
@@ -1725,13 +1670,10 @@ class App(MainWin):
     def action_select_audio_track(self, track_id):
         if track_id == self._active_audio_track_id:
             return
-
         self.mediaplayer.select_audio_track(track_id)
-
         if self._active_audio_track_id is not None:
             idm = IDM_AUDIO_TRACK + 1 + self._active_audio_track_id
             user32.CheckMenuItem(self.h_menu_audio_tracks, idm, MF_BYCOMMAND | MF_UNCHECKED)
-
         self._active_audio_track_id = track_id
         user32.CheckMenuItem(self.h_menu_audio_tracks, IDM_AUDIO_TRACK + 1 + track_id, MF_BYCOMMAND | MF_CHECKED)
 
@@ -1741,13 +1683,10 @@ class App(MainWin):
     def action_select_video_track(self, track_id):
         if track_id == self._active_video_track_id:
             return
-
         self.mediaplayer.select_video_track(track_id)
-
         if self._active_video_track_id is not None:
             idm = IDM_VIDEO_TRACK + 1 + self._active_video_track_id
             user32.CheckMenuItem(self.h_menu_video_tracks, idm, MF_BYCOMMAND | MF_UNCHECKED)
-
         self._active_video_track_id = track_id
         user32.CheckMenuItem(self.h_menu_video_tracks, IDM_VIDEO_TRACK + 1 + track_id, MF_BYCOMMAND | MF_CHECKED)
 
@@ -1757,13 +1696,10 @@ class App(MainWin):
     def action_select_sub_track(self, track_id):
         if track_id == self._active_sub_track_id:
             return
-
         self.mediaplayer.select_sub_track(track_id)
-
         if self._active_sub_track_id is not None:
             idm = IDM_SUB_TRACK + 1 + self._active_sub_track_id
             user32.CheckMenuItem(self.h_menu_sub_tracks, idm, MF_BYCOMMAND | MF_UNCHECKED)
-
         self._active_sub_track_id = track_id
         user32.CheckMenuItem(self.h_menu_sub_tracks, IDM_SUB_TRACK + 1 + track_id, MF_BYCOMMAND | MF_CHECKED)
 
@@ -1773,7 +1709,6 @@ class App(MainWin):
     def update_ui_reset(self):
         self.slider_seek.set_pos(0)
         self.slider_seek.enable_window(False)
-
         for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_SKIP_BACK, IDM_SKIP_FORWARD):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, FALSE)
         for idm in (
@@ -1783,21 +1718,17 @@ class App(MainWin):
             IDM_ZOOM_50, IDM_ZOOM_100, IDM_ZOOM_200
         ):
             user32.EnableMenuItem(self.h_menu, idm, MF_BYCOMMAND | MF_GRAYED)
-
         taskbar.SetProgressState(self.hwnd, TBPF.NOPROGRESS)
         self._state = STATE_STOPPED
-
         if self.engine != 'webview':
             ok = TRUE
             while ok:
                 ok = user32.RemoveMenu(self.h_menu_audio_tracks, 0, MF_BYPOSITION)
             user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_AUDIO), 0, MF_BYPOSITION | MF_GRAYED)
-
             ok = TRUE
             while ok:
                 ok = user32.RemoveMenu(self.h_menu_video_tracks, 0, MF_BYPOSITION)
             user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_VIDEO), 0, MF_BYPOSITION | MF_GRAYED)
-
         ok = TRUE
         while ok:
             ok = user32.RemoveMenu(self.h_menu_sub_tracks, 0, MF_BYPOSITION)
@@ -1808,27 +1739,21 @@ class App(MainWin):
     ########################################
     def update_ui_has_media(self, has_video, has_duration, is_url):
         self.slider_seek.enable_window(has_duration)
-
         for idm in (IDM_PLAY_PAUSE, IDM_STOP):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, TRUE)
         for idm in (IDM_SKIP_BACK, IDM_SKIP_FORWARD):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, int(has_duration))
-
         state = MF_BYCOMMAND | MF_ENABLED
         for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_CLOSE, IDM_SNAPSHOT, IDM_SHOW_MEDIAINFOS):
             user32.EnableMenuItem(self.h_menu, idm, state)
-
         state = MF_BYCOMMAND | (MF_ENABLED if has_video else MF_GRAYED)
         for idm in (IDM_FULLSCREEN, IDM_ZOOM_50, IDM_ZOOM_100, IDM_ZOOM_200):
             user32.EnableMenuItem(self.h_menu, idm, state)
-
         state = MF_BYCOMMAND | (MF_ENABLED if has_duration else MF_GRAYED)
         for idm in (IDM_SKIP_BACK, IDM_SKIP_FORWARD, IDM_STEP_BACK, IDM_STEP_FORWARD, IDM_REWIND):
             user32.EnableMenuItem(self.h_menu, idm, state)
-
         state = MF_BYCOMMAND | (MF_ENABLED if not is_url else MF_GRAYED)
         user32.EnableMenuItem(self.h_menu, IDM_OPEN_LOCATION, state)
-
         state = MF_BYCOMMAND | (MF_ENABLED if has_video and not is_url else MF_GRAYED)
         user32.EnableMenuItem(self.h_menu, IDM_LOAD_SUBS, state)
 
@@ -1837,12 +1762,9 @@ class App(MainWin):
     ########################################
     def update_ui_player_state(self, state):
         self.toolbar.send_message(TB_CHECKBUTTON, IDM_STOP, int(state == STATE_STOPPED))
-
         tbi = TBBUTTONINFOW()
         tbi.dwMask = TBIF_IMAGE | TBIF_TEXT
-
         if state == STATE_STOPPED:
-#            self.slider_seek.send_message(TBM_SETPOS, 1, 0)
             self.slider_seek.set_pos(0)
             self.statusbar.set_text('Stopped', IDX_STATUSBAR_PART_STATE)
             self.statusbar.set_text('', IDX_STATUSBAR_PART_TIME)
@@ -1860,7 +1782,6 @@ class App(MainWin):
             self.statusbar.set_text('Playing', IDX_STATUSBAR_PART_STATE)
             tbi.iImage = 7
             tbi.pszText  = 'Pause'
-
             if self.media_duration >= MIN_PROGRESS_DURATION:
                 taskbar.SetProgressState(self.hwnd, TBPF.NORMAL)
                 if self._state == STATE_STOPPED:
@@ -1949,8 +1870,7 @@ class App(MainWin):
         settings = {prop: getattr(self, prop) for prop in (
             'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist',
             'theme', 'volume', 'stayontop', 'minimize_to_tray', 'auto_resize_to_video', 'single_instance',
-            'remember_playlist', 'use_meta_title', 'fullscreen_dblclk', 'color_values',
-            'engine'
+            'remember_playlist', 'use_meta_title', 'fullscreen_dblclk', 'color_values', 'engine'
         )}
         settings['last_playlist'] = self.playlist.as_list() if self.remember_playlist else []
         settings['splitter_pos'] = self.pane.splitter.pos
@@ -1961,8 +1881,6 @@ class App(MainWin):
         settings['rect'] = [rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top]
         with open(os.path.join(APP_DIR, 'settings.json'), 'w') as f:
             f.write(json.dumps(settings))
-
-        self.media_file = None
         self.mediaplayer.close_file()
         super().quit()
 

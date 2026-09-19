@@ -23,6 +23,7 @@ try {
 			If ($msgboxresult -eq "Yes")
 			{
 			    (Get-Process "$app_name").CloseMainWindow() | out-null
+			    $ProgressPreference = 'SilentlyContinue'
 				Invoke-WebRequest -Uri "$base_url/releases/download/$tag/$setup_exe" -OutFile "$Env:TMP\$setup_exe"
 				Start-Process -FilePath "$Env:TMP\$setup_exe"
 			}
