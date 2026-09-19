@@ -4,7 +4,7 @@
 
 SMP is a simple desktop media player for Windows 11 x64 written in Python. What makes it special is that it supports 4 different multimedia engines (or frameworks) that a user can choose from. Note that changing the active engine requires the current player instance to be restartet.
 
-The application comes initially only with the WebView engine (and the VLC engine, if a VLC media player was found on the PC), other engines are downloaded when first selected.
+The application comes initially only with the WebView engine (and the VLC engine, if a VLC media player is found on the PC), other engines are automatically downloaded (from [here](https://github.com/59de44955ebd/SMP/releases/tag/engines)) when first selected.
 
 ## MultiMedia Engines
 
