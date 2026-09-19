@@ -19,11 +19,14 @@ from const import *
 from myslider import *
 from mystatusbar import *
 from playlist import *
-from settings import *
 
-APP_SETTINGS = load_settings()
+try:
+    with open(os.path.join(APP_DIR, 'settings.json'), 'r') as f:
+        APP_SETTINGS = json.loads(f.read())
+except:
+    APP_SETTINGS = {}
 
-if APP_SETTINGS.get('single_instance'):
+if APP_SETTINGS.get('single_instance', False):
      # Simple single instance implementation
     hwnd = user32.FindWindowW(APP_NAME, None)
     if hwnd:
@@ -34,7 +37,6 @@ if APP_SETTINGS.get('single_instance'):
         user32.ShowWindow(hwnd, SW_SHOWNORMAL)
         user32.SetForegroundWindow(hwnd)
         sys.exit(0)
-
 
 DIRECTSHOW_PATH = os.path.join(APP_DIR, 'engine_directshow')
 HAS_DIRECTSHOW = os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'LAVSplitter.ax'))
@@ -54,27 +56,29 @@ if not HAS_VLC:
 MPV_PATH = os.path.join(APP_DIR, 'engine_mpv', 'libmpv-2.dll')
 HAS_MPV = os.path.isfile(MPV_PATH)
 
-if ('engine' not in APP_SETTINGS or
-    (APP_SETTINGS['engine'] == IDM_ENGINE_DIRECTSHOW and not HAS_DIRECTSHOW) or
-    (APP_SETTINGS['engine'] == IDM_ENGINE_VLC and not HAS_VLC) or
-    (APP_SETTINGS['engine'] == IDM_ENGINE_MPV and not HAS_MPV)
-):
-    APP_SETTINGS['engine'] = IDM_ENGINE_WEBVIEW
+engine = APP_SETTINGS.get('engine', 'WebView')
 
-if APP_SETTINGS['engine'] == IDM_ENGINE_DIRECTSHOW:
+if (
+    (engine == 'DirectShow' and not HAS_DIRECTSHOW) or
+    (engine == 'mpv' and not HAS_MPV) or
+    (engine == 'VLC' and not HAS_VLC)
+):
+    engine = 'WebView'
+
+if engine == 'DirectShow':
     import dshow_player
     dshow_player.init(DIRECTSHOW_PATH)
     Player = dshow_player.Player
 
-elif APP_SETTINGS['engine'] == IDM_ENGINE_VLC:
-    import vlc_player
-    vlc_player.init(VLC_PATH)
-    Player = vlc_player.Player
-
-elif APP_SETTINGS['engine'] == IDM_ENGINE_MPV:
+elif engine == 'mpv':
     import mpv_player
     mpv_player.init(MPV_PATH)
     Player = mpv_player.Player
+
+elif engine == 'VLC':
+    import vlc_player
+    vlc_player.init(VLC_PATH)
+    Player = vlc_player.Player
 
 else:
     from webview2_player import *
@@ -83,16 +87,6 @@ if IS_FROZEN:
     HMOD_RESOURCES = kernel32.GetModuleHandleW(None)
 else:
     HMOD_RESOURCES = kernel32.LoadLibraryW(os.path.join(APP_DIR, 'resources.dll'))
-
-########################################
-# Returns integer tuple (hours, minutes, seconds, milliseconds)
-########################################
-def time_to_hms(secs: float) -> tuple:
-    h = int(secs / 3600)
-    secs -= h * 3600
-    m = int(secs / 60)
-    secs -= m * 60
-    return h, m, int(secs), int(1000 * (secs % 1))
 
 
 class App(MainWin):
@@ -103,52 +97,29 @@ class App(MainWin):
     def __init__(self):
 
         # Default settings
-        self.show_millisecs = False
-        self.show_menu = True
-        self.show_seek = True
-        self.show_controls = True
-        self.show_status = True
-        self.show_playlist = False
-        self.stayontop = False
-        self.minimize_to_tray = False
-        self.auto_resize_to_video = False
-        self.single_instance = False
-        self.volume = 75
-        self.theme = THEME_DARK
-        self.remember_playlist = False
-        self.use_meta_title = False
-        self.fullscreen_dblclk = True
-
-        if 'rect' in APP_SETTINGS:
-            left, top, width, height = eval(APP_SETTINGS['rect'])
-            del APP_SETTINGS['rect']
-        else:
-            left, top, width, height = CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT
-
-        if 'splitter_pos' in APP_SETTINGS:
-            splitter_pos = APP_SETTINGS['splitter_pos']
-            del APP_SETTINGS['splitter_pos']
-        else:
-            splitter_pos = 200
-
-        if 'last_playlist' in APP_SETTINGS:
-            last_playlist = eval(APP_SETTINGS['last_playlist'])
-            del APP_SETTINGS['last_playlist']
-        else:
-            last_playlist = None
-
-        if 'color_values' in APP_SETTINGS:
-            self.color_values = eval(APP_SETTINGS['color_values'])
-            del APP_SETTINGS['color_values']
-        else:
-            self.color_values = {k: 100 for k in COLOR_KEYS} #{'brightness': 100, 'contrast': 100, 'hue': 100, 'saturation': 100, 'gamma': 100}
-
-        for k, v in APP_SETTINGS.items():
-            setattr(self, k, v)
+        self.auto_resize_to_video = APP_SETTINGS.get('auto_resize_to_video', False)
+        self.color_values = APP_SETTINGS.get('color_values', {k: 100 for k in COLOR_KEYS})
+        self.fullscreen_dblclk = APP_SETTINGS.get('fullscreen_dblclk', True)
+        self.minimize_to_tray = APP_SETTINGS.get('minimize_to_tray', False)
+        self.remember_playlist = APP_SETTINGS.get('remember_playlist', False)
+        self.show_controls = APP_SETTINGS.get('show_controls', True)
+        self.show_menu = APP_SETTINGS.get('show_menu', True)
+        self.show_millisecs = APP_SETTINGS.get('show_millisecs', False)
+        self.show_playlist = APP_SETTINGS.get('show_playlist', False)
+        self.show_seek = APP_SETTINGS.get('show_seek', True)
+        self.show_status = APP_SETTINGS.get('show_status', True)
+        self.single_instance = APP_SETTINGS.get('single_instance', False)
+        self.stayontop = APP_SETTINGS.get('stayontop', False)
+        self.theme = APP_SETTINGS.get('theme', THEME_DARK)
+        self.use_meta_title = APP_SETTINGS.get('use_meta_title', False)
+        self.volume = APP_SETTINGS.get('volume', 75)
+        self.engine = engine
+        left, top, width, height = APP_SETTINGS.get('rect', (CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT))
+        splitter_pos = APP_SETTINGS.get('splitter_pos', 200)
+        last_playlist = APP_SETTINGS.get('last_playlist', None)
 
         self.media_file = None
         self.update_counter = 0
-
         self.is_loop = False
         self.is_mute = False
         self.min_tracksize = POINT(394, 0)
@@ -241,7 +212,7 @@ class App(MainWin):
 
         super().__init__(
             window_class = APP_NAME,
-            window_title = f'{APP_NAME} [{ENGINES[self.engine]}]',
+            window_title = f'{APP_NAME} [{self.engine}]',
             class_style = 0,
             ex_style = WS_EX_ACCEPTFILES,
             h_accel = user32.LoadAcceleratorsW(HMOD_RESOURCES, LPCWSTR(1)),
@@ -277,7 +248,8 @@ class App(MainWin):
         flag = MF_BYCOMMAND | MF_CHECKED
 
         user32.CheckMenuItem(self.h_menu, IDM_THEME_AUTO + self.theme, MF_BYCOMMAND | MF_CHECKED)
-        user32.CheckMenuItem(self.h_menu, self.engine, MF_BYCOMMAND | MF_CHECKED)
+        idm = list(ENGINES.keys())[list(ENGINES.values()).index(self.engine)]
+        user32.CheckMenuItem(self.h_menu, idm, MF_BYCOMMAND | MF_CHECKED)
 
         if self.show_playlist:
             user32.CheckMenuItem(self.h_menu, IDM_SHOW_PLAYLIST, flag)
@@ -305,7 +277,7 @@ class App(MainWin):
         self.create_systray()
         self.create_playlist(splitter_pos)
 
-        if self.engine != IDM_ENGINE_WEBVIEW:
+        if self.engine != 'WebView':
             self.h_menu_audio_tracks = user32.CreateMenu()
             h_menu_audio = user32.GetSubMenu(self.h_menu, IDX_MENU_AUDIO)
             user32.InsertMenuW(h_menu_audio, 0, MF_BYPOSITION | MF_POPUP, self.h_menu_audio_tracks, 'Audio &Track')
@@ -391,7 +363,7 @@ class App(MainWin):
                     user32.GetCursorPos(byref(pt))
                     user32.MapWindowPoints(None, self.slider_seek.hwnd, byref(pt), 1)
                     lpnmtdi = cast(lparam, POINTER(NMTTDISPINFOW))
-                    h, m, s, ms = time_to_hms(self.media_duration * pt.x / (self.slider_seek.width - 1))
+                    h, m, s, ms = self.time_to_hms(self.media_duration * pt.x / (self.slider_seek.width - 1))
                     if self.media_duration >= 3600:
                         lpnmtdi.contents.szText = '{:02d}:{:02d}:{:02d}'.format(h, m, s)
                     else:
@@ -564,7 +536,7 @@ class App(MainWin):
             else:
                 command = 'main.py' + (f' "{self.media_file}"' if self.media_file else '')
                 cwd = os.path.dirname(os.path.realpath(__file__))
-            self.engine = idm
+            self.engine = ENGINES[idm]
             user32.SendMessageW(self.hwnd, WM_CLOSE, 0, 0)
             shell32.ShellExecuteW(None, None, sys.executable, command, cwd, SW_SHOWNORMAL)
 
@@ -583,9 +555,7 @@ class App(MainWin):
                         dwm_use_dark_mode(hwnd, True)
                         uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDOK), 'DarkMode_Explorer', None)
                         uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDCANCEL), 'DarkMode_Explorer', None)
-
                     user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), f"Engine '{ENGINES[idm]}' is not installed yet.\n\nDo you want to download and install it now?")
-
                     center_window(hwnd, self.hwnd)
 
                 elif msg == WM_COMMAND:
@@ -828,7 +798,7 @@ class App(MainWin):
     #
     ########################################
     def create_systray(self):
-        self.trayicon = TrayIcon(self, self.h_icon, WM_USER, f'{APP_NAME} [{ENGINES[self.engine]}]', show = False)
+        self.trayicon = TrayIcon(self, self.h_icon, WM_USER, f'{APP_NAME} [{self.engine}]', show = False)
 
         ########################################
         #
@@ -1095,7 +1065,7 @@ class App(MainWin):
         self.media_duration = 0
         self.mediaplayer.close_file()
 
-        txt = f'{APP_NAME} [{ENGINES[self.engine]}]'
+        txt = f'{APP_NAME} [{self.engine}]'
         self.set_window_text(txt)
         self.trayicon.set_tooltip(txt)
 
@@ -1704,7 +1674,7 @@ class App(MainWin):
 
                     user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_ENABLED)
 
-                if self.engine != IDM_ENGINE_WEBVIEW:
+                if self.engine != 'WebView':
                     self._active_video_track_id = None
                     video_tracks = self.mediaplayer.get_video_tracks()
                     if video_tracks:
@@ -1733,7 +1703,7 @@ class App(MainWin):
                     pass
 
 
-            if self.engine != IDM_ENGINE_WEBVIEW:
+            if self.engine != 'WebView':
                 self._active_audio_track_id = None
                 audio_tracks = self.mediaplayer.get_audio_tracks()
                 if audio_tracks:
@@ -1817,7 +1787,7 @@ class App(MainWin):
         taskbar.SetProgressState(self.hwnd, TBPF.NOPROGRESS)
         self._state = STATE_STOPPED
 
-        if self.engine != IDM_ENGINE_WEBVIEW:
+        if self.engine != 'WebView':
             ok = TRUE
             while ok:
                 ok = user32.RemoveMenu(self.h_menu_audio_tracks, 0, MF_BYPOSITION)
@@ -1921,7 +1891,7 @@ class App(MainWin):
                 return
             self.timer_stop()
             self.update_ui_player_state(STATE_STOPPED)
-            if self.engine == IDM_ENGINE_MPV:
+            if self.engine == 'mpv':
                 self.mediaplayer.set_time(0)
 
     ########################################
@@ -1936,6 +1906,16 @@ class App(MainWin):
             self.update_time_display(secs)
 
     ########################################
+    # Returns integer tuple (hours, minutes, seconds, milliseconds)
+    ########################################
+    def time_to_hms(self, secs: float) -> tuple:
+        h = int(secs / 3600)
+        secs -= h * 3600
+        m = int(secs / 60)
+        secs -= m * 60
+        return h, m, int(secs), int(1000 * (secs % 1))
+
+    ########################################
     #
     ########################################
     def update_time_format(self):
@@ -1944,7 +1924,7 @@ class App(MainWin):
         else:
             self.time_format = '{:02d}:{:02d}.{:03d}' if self.show_millisecs else '{:02d}:{:02d}'
         if self.media_duration > 0:
-            h, m, s, ms = time_to_hms(self.media_duration)
+            h, m, s, ms = self.time_to_hms(self.media_duration)
             if self.media_duration >= 3600:
                 self.time_format += (f' / {h:02d}:{m:02d}:{s:02d}.{ms:03d}' if self.show_millisecs else f' / {h:02d}:{m:02d}:{s:02d}')
             else:
@@ -1954,12 +1934,11 @@ class App(MainWin):
     #
     ########################################
     def update_time_display(self, secs):
-        h, m, s, ms = time_to_hms(secs)
+        h, m, s, ms = self.time_to_hms(secs)
         self.statusbar.set_text(
             self.time_format.format(h, m, s, ms) if self.media_duration >= 3600 else self.time_format.format(m, s, ms),
             IDX_STATUSBAR_PART_TIME
         )
-
         if self.media_duration >= MIN_PROGRESS_DURATION and secs >= 1:
             taskbar.SetProgressValue(self.hwnd, int(secs), int(self.media_duration))
 
@@ -1967,8 +1946,22 @@ class App(MainWin):
     #
     ########################################
     def quit(self):
-        self.last_playlist = str(self.playlist.as_list()) if self.remember_playlist else '[]'
-        save_settings(self)
+        settings = {prop: getattr(self, prop) for prop in (
+            'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist',
+            'theme', 'volume', 'stayontop', 'minimize_to_tray', 'auto_resize_to_video', 'single_instance',
+            'remember_playlist', 'use_meta_title', 'fullscreen_dblclk', 'color_values',
+            'engine'
+        )}
+        settings['last_playlist'] = self.playlist.as_list() if self.remember_playlist else []
+        settings['splitter_pos'] = self.pane.splitter.pos
+        if self.mediaplayer.is_fullscreen():
+            self.mediaplayer.set_fullscreen(False)
+        self.show(SW_SHOWNORMAL)
+        rc = self.get_window_rect()
+        settings['rect'] = [rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top]
+        with open(os.path.join(APP_DIR, 'settings.json'), 'w') as f:
+            f.write(json.dumps(settings))
+
         self.media_file = None
         self.mediaplayer.close_file()
         super().quit()

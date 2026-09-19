@@ -14,8 +14,6 @@ user32 = ctypes.windll.user32
 
 advapi32.RegCloseKey.argtypes = (HKEY,)
 advapi32.RegCloseKey.restype = LSTATUS
-advapi32.RegCreateKeyW.argtypes = (HKEY, LPCWSTR, PHKEY)
-advapi32.RegCreateKeyW.restype = LSTATUS
 advapi32.RegOpenKeyW.argtypes = (HKEY, LPCWSTR, PHKEY)
 advapi32.RegOpenKeyW.restype = LSTATUS
 advapi32.RegQueryValueExW.argtypes = (HKEY, LPCWSTR, LPDWORD, LPDWORD, LPVOID, LPDWORD)

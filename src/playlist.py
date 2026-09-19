@@ -494,6 +494,7 @@ class PlayList(ListBox):
                 user32.SetWindowPos(hwnd_edit, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
                 user32.SetWindowTextW(hwnd_edit, media_item.title or os.path.basename(media_item.filename))
                 user32.SendMessageW(hwnd_edit, EM_SETSEL, 0, -1)
+                center_window(hwnd, self.parent_window.hwnd)
                 user32.SetFocus(hwnd_edit)
 
             elif msg == WM_COMMAND:

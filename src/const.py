@@ -40,7 +40,7 @@ COLOR_KEYS = ['brightness', 'contrast', 'hue', 'saturation', 'gamma']
 
 ENGINES = {
     IDM_ENGINE_DIRECTSHOW: 'DirectShow',
-    IDM_ENGINE_MPV: 'MPV',
+    IDM_ENGINE_MPV: 'mpv',
     IDM_ENGINE_VLC: 'VLC',
     IDM_ENGINE_WEBVIEW: 'WebView'
 }
