@@ -87,7 +87,10 @@ CLSID_VSFilter_autoload		    = '{9852A670-F845-491B-9BE6-EBD841B8A613}'
 CLSID_MPCVideoRenderer	        = '{71F080AA-8661-4093-B15E-4F6903E77D0A}'
 
 # Bass Audio Source
-CLSID_BassAudioSource = '{A351970E-4601-4BEC-93DE-CEE7AF64C636}'
+CLSID_BassAudioSource           = '{A351970E-4601-4BEC-93DE-CEE7AF64C636}'
+
+CLSID_MIDIParser			    = "{D51BD5A2-7548-11CF-A520-0080C77EF58A}"
+CLSID_MIDIRenderer			    = "{07B65360-C445-11CE-AFDE-00AA006C14F4}"
 
 # IMediaEvent constants
 #EC_ACTIVATE = 19
@@ -493,23 +496,10 @@ class VMR9ProcAmpControlRange(Structure):
 	def __init__(self):
 		self.dwSize = sizeof(self)
 
-
-#typedef struct _DXVA2_Fixed32
-#{
-#    union {
-#        struct {
-#            USHORT  Fraction;
-#            SHORT   Value;
-#        };
-#        LONG ll;
-#    };
-#} DXVA2_Fixed32;
-
 class DXVA2_Fixed32(Structure):
 	_fields_ = (
 		('Fraction', USHORT),
 		('Value', SHORT),
-#		('ll', LONG),
 	)
 
 class DXVA2_ValueRange(Structure):

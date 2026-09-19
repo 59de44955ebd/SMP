@@ -5,15 +5,12 @@ from winapp.const import WM_SIZE, WM_APP
 
 from const import RES_DIR
 
-FILTER_DIR = os.path.join(os.path.dirname(__file__), 'filters')
-
 ADD_DIRECTVOBSUB = True
 USE_LAV_DECODERS = True
 USE_LOCAL_FILTERS = True
 USE_MASTER_VOLUME = False
 USE_BASS_MIDI = True
 USE_MPC_RENDERER = True  # If False, use VMR9 (Windowed) instead
-
 
 WM_EVENT_NOTIFY = WM_APP + 1
 
@@ -36,6 +33,13 @@ def DXVA2FloatToFixed(_float_):
     return DXVA2_Fixed32(LOWORD(v), HIWORD(v))
 
 
+FILTER_DIR = None  #os.path.join(os.path.dirname(__file__), 'filters')
+
+def init(filter_dir):
+    global FILTER_DIR
+    FILTER_DIR = filter_dir
+
+
 ########################################
 #
 ########################################
@@ -49,7 +53,8 @@ class Player():
         parent_window,
         volume = .75,
 
-        width = 0, height = 0
+        width = 0, height = 0,
+        auto_resize = True
     ):
         self._parent_window = parent_window
         self._width = width
@@ -105,15 +110,6 @@ class Player():
         ########################################
         #
         ########################################
-        def _on_WM_SIZE(hwnd, wparam, lparam):
-            width, height = lparam & 0xFFFF, (lparam >> 16) & 0xFFFF
-            self._resize(width, height)
-
-        parent_window.register_message_callback(WM_SIZE, _on_WM_SIZE)
-
-        ########################################
-        #
-        ########################################
         def _on_WM_EVENT_NOTIFY(hwnd, wparam, lparam):
             while True:
                 try:
@@ -132,6 +128,16 @@ class Player():
     #                print('EC_VIDEO_SIZE_CHANGED', self.get_size())
 
         parent_window.register_message_callback(WM_EVENT_NOTIFY, _on_WM_EVENT_NOTIFY)
+
+        if auto_resize:
+            ########################################
+            #
+            ########################################
+            def _on_WM_SIZE(hwnd, wparam, lparam):
+                width, height = lparam & 0xFFFF, (lparam >> 16) & 0xFFFF
+                self._resize(width, height)
+
+            parent_window.register_message_callback(WM_SIZE, _on_WM_SIZE)
 
     ########################################
     #
@@ -197,7 +203,6 @@ class Player():
 
         if self._video_window:
             # Reset the owner to NULL before releasing the Filter Graph Manager
-#            self._video_window.Visible = False
             self._video_window.Owner = 0
             self._video_window.MessageDrain = 0
             self._video_window = None
@@ -209,10 +214,8 @@ class Player():
                 if not fetched:
                     break
                 self._filter_graph.RemoveFilter(filt)
-                filt.Release()
                 enum.Reset()
-
-        self._filter_graph = None
+            self._filter_graph = None
 
         self._has_video = False
         self._has_audio = False
@@ -228,8 +231,8 @@ class Player():
             pin, fetched = enum.Next(1)
             if not fetched:
                 break
-            pinInfo = pin.QueryPinInfo()
-            if pin_name in ''.join(map(chr, pinInfo.achName)):
+            pin_info = pin.QueryPinInfo()
+            if pin_name in ''.join(map(chr, pin_info.achName)):
                 return pin
 
     ########################################
@@ -246,6 +249,7 @@ class Player():
                 try:
                     tmp = pin.ConnectedTo()
                     # Already connected - not the pin we want
+                    pin.Release()
                     continue
                 except:
                     return pin
@@ -255,34 +259,28 @@ class Player():
     ########################################
     def _build_graph_midi(self, src_file):
         if USE_BASS_MIDI:
-
             if USE_LOCAL_FILTERS:
                 bass_audio_source = self._create_object_from_path(CLSID_BassAudioSource, os.path.join(FILTER_DIR, 'BassAudioSource.ax'))
             else:
                 bass_audio_source = CreateObject(CLSID_BassAudioSource, interface = IBaseFilter)
             self._filter_graph.AddFilter(bass_audio_source, 'Base Audio Source')
-
             bass_audio_source.QueryInterface(IBassSource2).SetSoundfont(os.path.join(RES_DIR, 'soundbank.sf2'))
-
-            bass_audio_source_src = bass_audio_source.QueryInterface(IFileSourceFilter)
-            bass_audio_source_src.Load(src_file, None)
+            bass_audio_source.QueryInterface(IFileSourceFilter).Load(src_file, None)
 
             # Add DirectSound Audio Renderer
             directsound_audio_renderer = CreateObject(CLSID_DirectSoundAudioRenderer, interface = IBaseFilter)
             self._filter_graph.AddFilter(directsound_audio_renderer, 'DirectSound Audio Renderer')
 
             # Connect Audio Decoder and DirectSound Audio Renderer
-    #        pin_out_audio_decoder = self._get_pin_by_name(audio_decoder, 'Output' if USE_LAV_DECODERS else 'XFrom Out')
-            pin_out_src = self._get_unconnected_pin(bass_audio_source, PINDIR_OUTPUT)
-            pin_in_audio_renderer = self._get_pin_by_name(directsound_audio_renderer, 'Audio Input pin (rendered)')
-            self._filter_graph.ConnectDirect(pin_out_src, pin_in_audio_renderer, None)
-
-            bass_audio_source.AddRef()
+            self._filter_graph.ConnectDirect(
+                self._get_unconnected_pin(bass_audio_source, PINDIR_OUTPUT),
+                self._get_unconnected_pin(directsound_audio_renderer, PINDIR_INPUT),
+                None
+            )
         else:
             file_source_async = CreateObject(CLSID_FileSourceAsync, interface = IBaseFilter)
             self._filter_graph.AddFilter(file_source_async, 'FileSourceAsync')
-            file_source_async_src = file_source_async.QueryInterface(IFileSourceFilter)
-            file_source_async_src.Load(src_file, None)
+            file_source_async.QueryInterface(IFileSourceFilter).Load(src_file, None)
 
             midi_parser = CreateObject(CLSID_MIDIParser, interface = IBaseFilter)
             self._filter_graph.AddFilter(midi_parser, 'MIDIParser')
@@ -290,13 +288,17 @@ class Player():
             midi_renderer = CreateObject(CLSID_MIDIRenderer, interface = IBaseFilter)
             self._filter_graph.AddFilter(midi_renderer, 'MIDIRenderer')
 
-            pin_out_src = self._get_unconnected_pin(file_source_async, PINDIR_OUTPUT)
-            pin_in_parser = self._get_unconnected_pin(midi_parser, PINDIR_INPUT)
-            self._filter_graph.ConnectDirect(pin_out_src, pin_in_parser, None)
+            self._filter_graph.ConnectDirect(
+                self._get_unconnected_pin(file_source_async, PINDIR_OUTPUT),
+                self._get_unconnected_pin(midi_parser, PINDIR_INPUT),
+                None
+            )
 
-            pin_out_parser = self._get_unconnected_pin(midi_parser, PINDIR_OUTPUT)
-            pin_in_renderer = self._get_unconnected_pin(midi_renderer, PINDIR_INPUT)
-            self._filter_graph.ConnectDirect(pin_out_parser, pin_in_renderer, None)
+            self._filter_graph.ConnectDirect(
+                self._get_unconnected_pin(midi_parser, PINDIR_OUTPUT),
+                self._get_unconnected_pin(midi_renderer, PINDIR_INPUT),
+                None
+            )
 
         self._has_audio = True
         return True
@@ -351,17 +353,17 @@ class Player():
             # Add Video Renderer
             if USE_MPC_RENDERER:
                 if USE_LOCAL_FILTERS:
-                    video_mixing_renderer = self._create_object_from_path(CLSID_MPCVideoRenderer, os.path.join(FILTER_DIR, 'MpcVideoRenderer.ax'))
+                    video_renderer = self._create_object_from_path(CLSID_MPCVideoRenderer, os.path.join(FILTER_DIR, 'MpcVideoRenderer.ax'))
                 else:
-                    video_mixing_renderer = CreateObject(CLSID_MPCVideoRenderer, interface = IBaseFilter)
+                    video_renderer = CreateObject(CLSID_MPCVideoRenderer, interface = IBaseFilter)
             else:
-                video_mixing_renderer = CreateObject(CLSID_VideoMixingRenderer9, interface = IBaseFilter)
+                video_renderer = CreateObject(CLSID_VideoMixingRenderer9, interface = IBaseFilter)
 
             if not USE_MPC_RENDERER:
-                self._vmr_aspect_control = video_mixing_renderer.QueryInterface(IVMRAspectRatioControl9)
+                self._vmr_aspect_control = video_renderer.QueryInterface(IVMRAspectRatioControl9)
 
             self._filter_graph.AddFilter(
-                video_mixing_renderer,
+                video_renderer,
                 'MPC Video Renderer' if USE_MPC_RENDERER else 'Video Mixing Renderer 9'
             )
 
@@ -395,25 +397,25 @@ class Player():
                     # Connect Video Decoder and DirectVobSub
                     pin_in_directvobsub = self._get_pin_by_name(direct_vob_sub, 'Video')
                     self._filter_graph.ConnectDirect(pin_out_video_decoder, pin_in_directvobsub, None)
+                    pin_in_directvobsub.Release()
 
                 # Connect DirectVobSub and Video Mixing Renderer
                 pin_out_directvobsub = self._get_pin_by_name(direct_vob_sub, 'Out')
-
                 if USE_MPC_RENDERER:
-                    pin_in_video_renderer = self._get_pin_by_name(video_mixing_renderer, 'In')
+                    pin_in_video_renderer = self._get_pin_by_name(video_renderer, 'In')
                 else:
-                    pin_in_video_renderer = self._get_pin_by_name(video_mixing_renderer, 'VMR Input0')
-
+                    pin_in_video_renderer = self._get_pin_by_name(video_renderer, 'VMR Input0')
                 self._filter_graph.ConnectDirect(pin_out_directvobsub, pin_in_video_renderer, None)
+                pin_out_directvobsub.Release()
 
                 self._direct_vob_sub = direct_vob_sub.QueryInterface(IDirectVobSub)
             else:
                 # Connect LAV Video Decoder and Video Mixing Renderer
                 pin_out_video_decoder = self._get_pin_by_name(video_decoder, 'Out')
                 if USE_MPC_RENDERER:
-                    pin_in_video_renderer = self._get_pin_by_name(video_mixing_renderer, 'In')
+                    pin_in_video_renderer = self._get_pin_by_name(video_renderer, 'In')
                 else:
-                    pin_in_video_renderer = self._get_pin_by_name(video_mixing_renderer, 'VMR Input0')
+                    pin_in_video_renderer = self._get_pin_by_name(video_renderer, 'VMR Input0')
                 self._filter_graph.ConnectDirect(pin_out_video_decoder, pin_in_video_renderer, None)
 
             # get framerate
@@ -428,12 +430,15 @@ class Player():
                 self._frame_step = vh.contents.AvgTimePerFrame
 
             if USE_MPC_RENDERER:
-                serv = video_mixing_renderer.QueryInterface(IMFGetService)
+                serv = video_renderer.QueryInterface(IMFGetService)
                 self._mixer_control = serv.GetService(GUID(CLSID_MR_VIDEO_MIXER_SERVICE), IMFVideoProcessor._iid_)
             else:
-                self._mixer_control = video_mixing_renderer.QueryInterface(IVMRMixerControl9)
+                self._mixer_control = video_renderer.QueryInterface(IVMRMixerControl9)
 
-            pin_out_src_video.Release() # for some reason only the splitter pins have to be released explicitely!
+            pin_out_src_video.Release()
+            pin_in_video_decoder.Release()
+            pin_out_video_decoder.Release()
+            pin_in_video_renderer.Release()
 
             self._has_video = True
 
@@ -462,7 +467,10 @@ class Player():
             pin_in_audio_renderer = self._get_pin_by_name(directsound_audio_renderer, 'Audio Input pin (rendered)')
             self._filter_graph.ConnectDirect(pin_out_audio_decoder, pin_in_audio_renderer, None)
 
-            pin_out_src_audio.Release() # for some reason only the splitter pins have to be released explicitely!
+            pin_out_src_audio.Release()
+            pin_in_audio_decoder.Release()
+            pin_out_audio_decoder.Release()
+            pin_in_audio_renderer.Release()
 
             self._has_audio = True
 
@@ -508,7 +516,7 @@ class Player():
         self._filter_graph = CreateObject(CLSID_FilterGraph, interface=IFilterGraph)
 
         ext = os.path.splitext(media_file)[1].lower()
-        self._is_midi = ext in ('.mid', '.rmi')
+        self._is_midi = ext in ('.mid', '.rmi', '.kar')
 
         if self._is_midi:
             self._build_graph_midi(media_file)
@@ -795,7 +803,7 @@ class Player():
     def set_volume(self, v: float):
         v = max(0, min(1, v))
         self._volume = v
-        if USE_MASTER_VOLUME:# or self._is_midi:
+        if USE_MASTER_VOLUME or (self._is_midi and not USE_BASS_MIDI):
             v = int(0xFFFF * v)
             winmm.waveOutSetVolume(0, v | v << 16)
         else:

@@ -1,6 +1,8 @@
 ﻿import os
 import sys
 
+from resources import *
+
 IS_FROZEN = getattr(sys, 'frozen', False)
 
 if IS_FROZEN:
@@ -33,3 +35,23 @@ VOLUME_STEP = 5
 THEME_AUTO = 0
 THEME_LIGHT = 1
 THEME_DARK = 2
+
+COLOR_KEYS = ['brightness', 'contrast', 'hue', 'saturation', 'gamma']
+
+ENGINES = {
+    IDM_ENGINE_DIRECTSHOW: 'DirectShow',
+    IDM_ENGINE_MPV: 'MPV',
+    IDM_ENGINE_VLC: 'VLC',
+    IDM_ENGINE_WEBVIEW: 'WebView'
+}
+
+RATIOS = {
+    IDM_RATIO_DEFAULT: '',
+    IDM_RATIO_4_3: '4:3',
+    IDM_RATIO_5_4: '5:4',
+    IDM_RATIO_16_9: '16:9',
+    IDM_RATIO_16_10: '16:10',
+    IDM_RATIO_235_100: '235:100',
+    IDM_RATIO_185_100: '185:100',
+    IDM_RATIO_NONE: None,
+}

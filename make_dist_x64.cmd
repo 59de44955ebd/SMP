@@ -61,7 +61,7 @@ ren winapp\dlls_c.py dlls.py
 cd ..
 
 set PYTHONPATH=src
-pyinstaller --noupx -w -n "%APP_NAME%" -i %ICON% -r "resources.dll" -D "src/main.py" --contents-directory %DATA_DIR% --hidden-import dshow_player --hidden-import vlc_player  --hidden-import webview2_player
+pyinstaller --noupx -w -n "%APP_NAME%" -i %ICON% -r "resources.dll" -D "src/main.py" --contents-directory %DATA_DIR% --hidden-import dshow_player --hidden-import mpv_player --hidden-import vlc_player  --hidden-import webview2_player
 
 ren src\winapp\const.py const_c.py
 ren src\winapp\__const.py const.py
@@ -75,7 +75,7 @@ echo.
 echo ****************************************
 echo Copying resources...
 echo ****************************************
-xcopy /e filters "dist\%APP_NAME%\%DATA_DIR%\filters\" >nul
+::xcopy /e filters "dist\%APP_NAME%\%DATA_DIR%\filters\" >nul
 copy "src\webview2\native\win-amd64\loader.dll" "dist\%APP_NAME%\%DATA_DIR%\"
 
 copy "resources\index.htm" "dist\%APP_NAME%\%DATA_DIR%\"
@@ -85,6 +85,7 @@ copy "resources\spessasynth_lib.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\spessasynth_processor.min.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\srt.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\stb-vorbis.js" "dist\%APP_NAME%\%DATA_DIR%\"
+copy "resources\download_engine.ps1" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\update_app.ps1" "dist\%APP_NAME%\%DATA_DIR%\"
 exit /B
 

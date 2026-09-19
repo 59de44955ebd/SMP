@@ -81,7 +81,6 @@ class NMHDR(Structure):
         ("idFrom", UINT_PTR),
         ("code", INT),
     ]
-#LPNMHDR = POINTER(NMHDR)
 
 class NMCUSTOMDRAW(Structure):
     _fields_ = [
@@ -93,7 +92,6 @@ class NMCUSTOMDRAW(Structure):
         ("uItemState", UINT),
         ("lItemlParam", LPARAM),
     ]
-#LPNMCUSTOMDRAW = POINTER(NMCUSTOMDRAW)
 
 class NMMOUSE(Structure):
     _fields_ = [
@@ -112,6 +110,28 @@ class PAINTSTRUCT(Structure):
         ("fRestore",       BOOL),
         ("fIncUpdate",     BOOL),
         ("rgbReserved",    BYTE * 32),
+    ]
+
+class SHELLEXECUTEINFOW(Structure):
+    def __init__(self, *args, **kwargs):
+        super(SHELLEXECUTEINFOW, self).__init__(*args, **kwargs)
+        self.cbSize = sizeof(self)
+    _fields_ = [
+        ('cbSize',          DWORD),
+        ('fMask',           ULONG),
+        ('hwnd',            HWND),
+        ('lpVerb',          LPCWSTR),
+        ('lpFile',          LPCWSTR),
+        ('lpParameters',    LPCWSTR),
+        ('lpDirectory',     LPCWSTR),
+        ('nShow',           INT),
+        ('hInstApp',        HINSTANCE),
+        ('lpIDList',        LPVOID),  # PIDL
+        ('lpClass',         LPCWSTR),
+        ('hkeyClass',       HKEY),
+        ('dwHotKey',        DWORD),
+        ('hIcon',           HANDLE),
+        ('hProcess',        HANDLE)
     ]
 
 class SHFILEINFOW(Structure):

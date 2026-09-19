@@ -60,6 +60,15 @@ build_date = "Mon Oct  7 16:39:34 2024 3.0.21"
 DEFAULT_ENCODING = "utf-8"
 
 
+dll = None
+plugin_path = None
+
+def init(vlc_path):
+    global dll, plugin_path
+    dll = ctypes.CDLL(os.path.join(vlc_path, 'libvlc.dll'))
+    plugin_path = vlc_path
+
+
 def str_to_bytes(s):
     """Translate string or bytes to bytes."""
     if isinstance(s, str):

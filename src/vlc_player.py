@@ -12,6 +12,10 @@ import vlc
 TIMER_ID_END_REACHED = 1
 TIMER_ID_PLAYING = 2
 
+def init(vlc_path):
+#    vlc.dll = CDLL(os.path.join(vlc_path, 'libvlc.dll'))
+#    vlc.plugin_path = vlc_path
+    vlc.init(vlc_path)
 
 ########################################
 #
@@ -114,7 +118,7 @@ class Player():
         self._media_event_manager = self._media.event_manager()
 
         ext = os.path.splitext(media_file)[1].lower()
-        self._is_midi = ext in ('.mid', '.rmi')
+        self._is_midi = ext in ('.mid', '.rmi', '.kar')
 
         ########################################
         #
@@ -432,6 +436,14 @@ class Player():
         self._player.video_set_adjust_int(vlc.VideoAdjustOption.Enable, 1)
         v = 1.0 + value
         self._player.video_set_adjust_float(vlc.VideoAdjustOption.Saturation, v)
+
+    ########################################
+    # -1..1
+    ########################################
+    def set_gamma(self, value: float):
+        self._player.video_set_adjust_int(vlc.VideoAdjustOption.Enable, 1)
+        v = 1.0 + value
+        self._player.video_set_adjust_float(vlc.VideoAdjustOption.Gamma, v)
 
     ########################################
     # e.g. '4:3', '' to reset to default, None means resize to window

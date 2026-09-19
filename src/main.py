@@ -18,99 +18,8 @@ from winapp.utils.taskbar import taskbar, TBPF
 from const import *
 from myslider import *
 from mystatusbar import *
-from resources import *
 from playlist import *
-
-RATIOS = {
-    IDM_RATIO_DEFAULT: '',
-    IDM_RATIO_4_3: '4:3',
-    IDM_RATIO_5_4: '5:4',
-    IDM_RATIO_16_9: '16:9',
-    IDM_RATIO_16_10: '16:10',
-    IDM_RATIO_235_100: '235:100',
-    IDM_RATIO_185_100: '185:100',
-    IDM_RATIO_NONE: None,
-}
-
-########################################
-# Load settings from registry
-########################################
-def load_settings() -> dict:
-    settings = {}
-    hkey = HKEY()
-    if advapi32.RegOpenKeyW(HKEY_CURRENT_USER, f'Software\\59de44955ebd\\{APP_NAME}', byref(hkey)) == ERROR_SUCCESS:
-        data = (BYTE * sizeof(DWORD))()
-        cbData = DWORD(sizeof(data))
-        # bool
-        for prop in (
-            'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist', 'stayontop',
-            'minimize_to_tray', 'auto_resize_to_video', 'single_instance', 'remember_playlist', 'use_meta_title',
-            'fullscreen_dblclk'
-        ):
-            if advapi32.RegQueryValueExW(hkey, prop, None, None, byref(data), byref(cbData)) == ERROR_SUCCESS:
-                settings[prop] = cast(data, POINTER(DWORD)).contents.value == 1
-        # int
-        for prop in ('engine', 'theme', 'volume', 'splitter_pos'):
-            if advapi32.RegQueryValueExW(hkey, prop, None, None, byref(data), byref(cbData)) == ERROR_SUCCESS:
-                settings[prop] = cast(data, POINTER(DWORD)).contents.value
-        # str
-        cbdata_str = DWORD()
-        if advapi32.RegQueryValueExW(hkey, 'rect', None, None, None, byref(cbdata_str)) == ERROR_SUCCESS:
-            data_str = (BYTE * cbdata_str.value)()
-            if advapi32.RegQueryValueExW(hkey, 'rect', None, None, data_str, byref(cbdata_str)) == ERROR_SUCCESS:
-                settings['rect'] = cast(data_str, LPWSTR).value
-
-        cbdata_str = DWORD()
-        if advapi32.RegQueryValueExW(hkey, 'last_playlist', None, None, None, byref(cbdata_str)) == ERROR_SUCCESS:
-            data_str = (BYTE * cbdata_str.value)()
-            if advapi32.RegQueryValueExW(hkey, 'last_playlist', None, None, data_str, byref(cbdata_str)) == ERROR_SUCCESS:
-                settings['last_playlist'] = cast(data_str, LPWSTR).value
-
-        cbdata_str = DWORD()
-        if advapi32.RegQueryValueExW(hkey, 'color_values', None, None, None, byref(cbdata_str)) == ERROR_SUCCESS:
-            data_str = (BYTE * cbdata_str.value)()
-            if advapi32.RegQueryValueExW(hkey, 'color_values', None, None, data_str, byref(cbdata_str)) == ERROR_SUCCESS:
-                settings['color_values'] = cast(data_str, LPWSTR).value
-
-    else:
-        advapi32.RegCreateKeyW(HKEY_CURRENT_USER, f'Software\\59de44955ebd\\{APP_NAME}' , byref(hkey))
-    advapi32.RegCloseKey(hkey)
-    return settings
-
-########################################
-# Save settings to registry
-########################################
-def save_settings(main):
-    hkey = HKEY()
-    if advapi32.RegOpenKeyW(HKEY_CURRENT_USER, f'Software\\59de44955ebd\\{APP_NAME}', byref(hkey)) == ERROR_SUCCESS:
-        dwsize = sizeof(DWORD)
-        # int / bool
-        for prop in (
-            'engine', 'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist',
-            'theme', 'volume', 'stayontop', 'minimize_to_tray', 'auto_resize_to_video', 'single_instance',
-            'remember_playlist', 'use_meta_title', 'fullscreen_dblclk'
-        ):
-            advapi32.RegSetValueExW(hkey, prop, 0, REG_DWORD, byref(DWORD(int(getattr(main, prop)))), dwsize)
-
-        advapi32.RegSetValueExW(hkey, 'splitter_pos', 0, REG_DWORD, byref(DWORD(main.pane.splitter.pos)), dwsize)
-
-        if main.mediaplayer.is_fullscreen():
-            main.mediaplayer.set_fullscreen(False)
-
-        main.show(SW_SHOWNORMAL)
-
-        rc = main.get_window_rect()
-        buf = create_unicode_buffer(f'({rc.left},{rc.top},{rc.right-rc.left},{rc.bottom-rc.top})')
-        advapi32.RegSetValueExW(hkey, 'rect', 0, REG_SZ, buf, sizeof(buf))
-
-        buf = create_unicode_buffer(main.last_playlist)
-        advapi32.RegSetValueExW(hkey, 'last_playlist', 0, REG_SZ, buf, sizeof(buf))
-
-        buf = create_unicode_buffer(str(main.color_values))
-        advapi32.RegSetValueExW(hkey, 'color_values', 0, REG_SZ, buf, sizeof(buf))
-
-        advapi32.RegCloseKey(hkey)
-
+from settings import *
 
 APP_SETTINGS = load_settings()
 
@@ -119,18 +28,19 @@ if APP_SETTINGS.get('single_instance'):
     hwnd = user32.FindWindowW(APP_NAME, None)
     if hwnd:
         if len(sys.argv) > 1:
-            cds = COPYDATASTRUCT(0, sizeof(WCHAR) * (len(sys.argv[1]) + 1), cast(LPWSTR(sys.argv[1]), LPVOID))
+            args = str(sys.argv[1:])
+            cds = COPYDATASTRUCT(0, sizeof(WCHAR) * (len(args) + 1), cast(LPWSTR(args), LPVOID))
             user32.SendMessageW(hwnd, WM_COPYDATA, 0, byref(cds))
         user32.ShowWindow(hwnd, SW_SHOWNORMAL)
         user32.SetForegroundWindow(hwnd)
         sys.exit(0)
 
 
-FILTER_DIR = os.path.join(APP_DIR, 'filters')
-HAS_DIRECTSHOW = os.path.isfile(os.path.join(FILTER_DIR, 'LAVSplitter.ax'))
+DIRECTSHOW_PATH = os.path.join(APP_DIR, 'engine_directshow')
+HAS_DIRECTSHOW = os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'LAVSplitter.ax'))
 
-VLC_PATH = APP_DIR
-HAS_VLC = os.path.isfile(os.path.join(APP_DIR, 'libvlc.dll'))
+VLC_PATH = os.path.join(APP_DIR, 'engine_vlc')
+HAS_VLC = os.path.isfile(os.path.join(VLC_PATH, 'libvlc.dll'))
 if not HAS_VLC:
     hkey = HKEY()
     if advapi32.RegOpenKeyW(HKEY_LOCAL_MACHINE, 'Software\\VideoLAN\\VLC', byref(hkey)) == ERROR_SUCCESS:
@@ -141,23 +51,30 @@ if not HAS_VLC:
             HAS_VLC = os.path.isfile(os.path.join(VLC_PATH, 'libvlc.dll'))
         advapi32.RegCloseKey(hkey)
 
-if 'engine' not in APP_SETTINGS:
-    APP_SETTINGS['engine'] = IDM_ENGINE_WEBVIEW
-elif APP_SETTINGS['engine'] == IDM_ENGINE_DIRECTSHOW and not HAS_DIRECTSHOW:
-    APP_SETTINGS['engine'] = IDM_ENGINE_WEBVIEW
-elif APP_SETTINGS['engine'] == IDM_ENGINE_VLC and not HAS_VLC:
+MPV_PATH = os.path.join(APP_DIR, 'engine_mpv', 'libmpv-2.dll')
+HAS_MPV = os.path.isfile(MPV_PATH)
+
+if ('engine' not in APP_SETTINGS or
+    (APP_SETTINGS['engine'] == IDM_ENGINE_DIRECTSHOW and not HAS_DIRECTSHOW) or
+    (APP_SETTINGS['engine'] == IDM_ENGINE_VLC and not HAS_VLC) or
+    (APP_SETTINGS['engine'] == IDM_ENGINE_MPV and not HAS_MPV)
+):
     APP_SETTINGS['engine'] = IDM_ENGINE_WEBVIEW
 
 if APP_SETTINGS['engine'] == IDM_ENGINE_DIRECTSHOW:
-#    from dshow_player import *
     import dshow_player
-    dshow_player.FILTER_DIR = FILTER_DIR
+    dshow_player.init(DIRECTSHOW_PATH)
     Player = dshow_player.Player
 
 elif APP_SETTINGS['engine'] == IDM_ENGINE_VLC:
-    from vlc_player import *
-    vlc.dll = CDLL(os.path.join(VLC_PATH, 'libvlc.dll'))
-    vlc.plugin_path = VLC_PATH
+    import vlc_player
+    vlc_player.init(VLC_PATH)
+    Player = vlc_player.Player
+
+elif APP_SETTINGS['engine'] == IDM_ENGINE_MPV:
+    import mpv_player
+    mpv_player.init(MPV_PATH)
+    Player = mpv_player.Player
 
 else:
     from webview2_player import *
@@ -166,26 +83,6 @@ if IS_FROZEN:
     HMOD_RESOURCES = kernel32.GetModuleHandleW(None)
 else:
     HMOD_RESOURCES = kernel32.LoadLibraryW(os.path.join(APP_DIR, 'resources.dll'))
-
-# for pip mode
-class WINDOWPOS(Structure):
-    _fields_ = [
-        ("hwnd", HWND),
-        ("hwndInsertAfter", HWND),
-        ("x", INT),
-        ("y", INT),
-        ("cx", INT),
-        ("cy", INT),
-        ("flags", UINT),
-    ]
-
-class NCCALCSIZE_PARAMS(Structure):
-    _fields_ = [
-        ("rgrc", RECT * 3),
-        ("lppos", POINTER(WINDOWPOS)),
-    ]
-
-BLACK_BRUSH = gdi32.CreateSolidBrush(0x0000000)
 
 ########################################
 # Returns integer tuple (hours, minutes, seconds, milliseconds)
@@ -244,17 +141,10 @@ class App(MainWin):
             self.color_values = eval(APP_SETTINGS['color_values'])
             del APP_SETTINGS['color_values']
         else:
-            self.color_values = {'brightness': 100, 'contrast': 100, 'hue': 100, 'saturation': 100}
+            self.color_values = {k: 100 for k in COLOR_KEYS} #{'brightness': 100, 'contrast': 100, 'hue': 100, 'saturation': 100, 'gamma': 100}
 
         for k, v in APP_SETTINGS.items():
             setattr(self, k, v)
-
-        if self.engine == IDM_ENGINE_DIRECTSHOW:
-            self.engine_name = 'DirectShow'
-        elif self.engine == IDM_ENGINE_VLC:
-            self.engine_name = 'VLC'
-        else:
-            self.engine_name = 'WebView'
 
         self.media_file = None
         self.update_counter = 0
@@ -329,8 +219,10 @@ class App(MainWin):
 
             # Options
             IDM_ENGINE_DIRECTSHOW:      lambda: self.action_set_engine(IDM_ENGINE_DIRECTSHOW),
+            IDM_ENGINE_MPV:             lambda: self.action_set_engine(IDM_ENGINE_MPV),
             IDM_ENGINE_VLC:             lambda: self.action_set_engine(IDM_ENGINE_VLC),
             IDM_ENGINE_WEBVIEW:         lambda: self.action_set_engine(IDM_ENGINE_WEBVIEW),
+
             IDM_STAY_ON_TOP:            self.action_toggle_stayontop,
             IDM_MINIMIZE_TO_TRAY:       self.action_toggle_minimize_to_tray,
             IDM_AUTO_RESIZE_TO_VIDEO:   self.action_toggle_auto_resize_to_video,
@@ -349,7 +241,7 @@ class App(MainWin):
 
         super().__init__(
             window_class = APP_NAME,
-            window_title = f'{APP_NAME} [{self.engine_name}]',
+            window_title = f'{APP_NAME} [{ENGINES[self.engine]}]',
             class_style = 0,
             ex_style = WS_EX_ACCEPTFILES,
             h_accel = user32.LoadAcceleratorsW(HMOD_RESOURCES, LPCWSTR(1)),
@@ -389,7 +281,6 @@ class App(MainWin):
 
         if self.show_playlist:
             user32.CheckMenuItem(self.h_menu, IDM_SHOW_PLAYLIST, flag)
-
         if self.stayontop:
             user32.CheckMenuItem(self.h_menu, IDM_STAY_ON_TOP, flag)
         if self.minimize_to_tray:
@@ -399,17 +290,11 @@ class App(MainWin):
         if self.single_instance:
             user32.CheckMenuItem(self.h_menu, IDM_SINGLE_INSTANCE, flag)
         if self.remember_playlist:
-            user32.use_meta_title(self.h_menu, IDM_REMEMBER_PLAYLIST, flag)
+            user32.CheckMenuItem(self.h_menu, IDM_REMEMBER_PLAYLIST, flag)
         if self.use_meta_title:
             user32.CheckMenuItem(self.h_menu, IDM_USE_META_TITLE, flag)
         if self.fullscreen_dblclk:
             user32.CheckMenuItem(self.h_menu, IDM_FULLSCREEN_DBLCLK, flag)
-
-        if not HAS_DIRECTSHOW:
-            user32.EnableMenuItem(self.h_menu, IDM_ENGINE_DIRECTSHOW, MF_BYCOMMAND | MF_GRAYED)
-
-        if not HAS_VLC:
-            user32.EnableMenuItem(self.h_menu, IDM_ENGINE_VLC, MF_BYCOMMAND | MF_GRAYED)
 
         use_dark_mode = self.theme == THEME_DARK or (self.theme == THEME_AUTO and reg_should_use_dark_mode())
 
@@ -464,7 +349,10 @@ class App(MainWin):
         ########################################
         def _on_WM_COPYDATA(hwnd, wparam, lparam):
             cds = cast(lparam, POINTER(COPYDATASTRUCT)).contents
-            self.load_media_file(cast(cds.lpData, LPWSTR).value)
+            media_files = eval(cast(cds.lpData, LPWSTR).value)
+            if media_files:
+                self.load_media_file(media_files[0])
+                self.playlist.add_files(media_files, True)
 
         self.register_message_callback(WM_COPYDATA, _on_WM_COPYDATA)
 
@@ -525,7 +413,7 @@ class App(MainWin):
         #
         ########################################
         def _on_WM_SETTINGCHANGE(hwnd, wparam, lparam):
-            if self.theme != IDM_THEME_AUTO:
+            if self.theme != THEME_AUTO:
                 return
             if lparam and cast(lparam, LPCWSTR).value == 'ImmersiveColorSet':
                 self.apply_theme(reg_should_use_dark_mode())
@@ -557,11 +445,12 @@ class App(MainWin):
         if self.stayontop:
             self.set_stayontop(True)
 
-        if last_playlist and self.remember_playlist:
-            self.playlist.from_list(last_playlist)
-
         if len(sys.argv) > 1:
-            self.create_timer(lambda: self.load_media_file(sys.argv[1]), 0, True)
+            media_files = sys.argv[1:]  #[f for f in dropped_items if os.path.isfile(f)]
+            self.create_timer(lambda: self.load_media_file(media_files[0]) or self.playlist.add_files(media_files), 0, True)
+
+        elif last_playlist and self.remember_playlist:
+            self.playlist.from_list(last_playlist)
 
     ########################################
     #
@@ -664,15 +553,91 @@ class App(MainWin):
     #
     ########################################
     def action_set_engine(self, idm):
-        if IS_FROZEN:
-            command = f'"{self.media_file}"' if self.media_file else ''
-            cwd = None
+
+        ########################################
+        #
+        ########################################
+        def _set_and_restart():
+            if IS_FROZEN:
+                command = f'"{self.media_file}"' if self.media_file else ''
+                cwd = None
+            else:
+                command = 'main.py' + (f' "{self.media_file}"' if self.media_file else '')
+                cwd = os.path.dirname(os.path.realpath(__file__))
+            self.engine = idm
+            user32.SendMessageW(self.hwnd, WM_CLOSE, 0, 0)
+            shell32.ShellExecuteW(None, None, sys.executable, command, cwd, SW_SHOWNORMAL)
+
+        if (
+            (idm == IDM_ENGINE_DIRECTSHOW and not HAS_DIRECTSHOW) or
+            (idm == IDM_ENGINE_MPV and not HAS_MPV) or
+            (idm == IDM_ENGINE_VLC and not HAS_VLC)
+        ):
+
+            ########################################
+            #
+            ########################################
+            def _dialog_proc_download_engine(hwnd, msg, wparam, lparam):
+                if msg == WM_INITDIALOG:
+                    if self.is_dark:
+                        dwm_use_dark_mode(hwnd, True)
+                        uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDOK), 'DarkMode_Explorer', None)
+                        uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDCANCEL), 'DarkMode_Explorer', None)
+
+                    user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), f"Engine '{ENGINES[idm]}' is not installed yet.\n\nDo you want to download and install it now?")
+
+                    center_window(hwnd, self.hwnd)
+
+                elif msg == WM_COMMAND:
+                    control_id = LOWORD(wparam)
+                    command = HIWORD(wparam)
+                    if command == BN_CLICKED:
+                        if control_id == IDOK:
+                            user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), 'Please be patient...')
+                            user32.EnableWindow(user32.GetDlgItem(hwnd, IDOK), FALSE)
+                            user32.EnableWindow(user32.GetDlgItem(hwnd, IDCANCEL), FALSE)
+
+                            engine_name = ENGINES[idm].lower()
+                            engine_dir = os.path.join(APP_DIR, f'engine_{engine_name}')
+                            exit_code = self.download_engine(engine_name)
+
+                            if exit_code != 0 or not os.path.isdir(engine_dir):
+                                user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), 'Server not found.\n\nPlease check your internet connection or try again later.')
+                                user32.EnableWindow(user32.GetDlgItem(hwnd, IDOK), TRUE)
+                                user32.EnableWindow(user32.GetDlgItem(hwnd, IDCANCEL), TRUE)
+                                return FALSE
+
+                            user32.EndDialog(hwnd, 0)
+                            _set_and_restart()
+                        else:
+                            user32.EndDialog(hwnd, 0)
+
+                elif self.is_dark:
+                    if msg == WM_CTLCOLORDLG:
+                        gdi32.SetBkColor(wparam, DARK_BG_COLOR)
+                        return DARK_BG_BRUSH
+                    elif msg == WM_CTLCOLORSTATIC:
+                        gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
+                        gdi32.SetBkColor(wparam, DARK_BG_COLOR)
+                        return DARK_BG_BRUSH
+                    elif msg == WM_CTLCOLORBTN:
+                        gdi32.SetDCBrushColor(wparam, DARK_BG_COLOR)
+                        return gdi32.GetStockObject(DC_BRUSH)
+
+                return FALSE
+
+            dialog_proc = WNDPROC(_dialog_proc_download_engine)
+
+            user32.DialogBoxParamW(
+                HMOD_RESOURCES,
+                MAKEINTRESOURCEW(IDD_DOWNLOAD_ENGINE),
+                self.hwnd,
+                dialog_proc,
+                NULL
+            )
+
         else:
-            command = 'main.py' + (f' "{self.media_file}"' if self.media_file else '')
-            cwd = os.path.dirname(os.path.realpath(__file__))
-        self.engine = idm
-        user32.SendMessageW(self.hwnd, WM_CLOSE, 0, 0)
-        shell32.ShellExecuteW(None, None, sys.executable, command, cwd, SW_SHOWNORMAL)
+            _set_and_restart()
 
     ########################################
     #
@@ -705,7 +670,7 @@ class App(MainWin):
         newclass.lpfnWndProc = self._windowproc_player
         newclass.style = CS_DBLCLKS  # CS_VREDRAW | CS_HREDRAW #|
         newclass.lpszClassName = 'VideoContainer'
-        newclass.hbrBackground = BLACK_BRUSH
+        newclass.hbrBackground = gdi32.GetStockObject(BLACK_BRUSH)
         newclass.hCursor = user32.LoadCursorW(None, IDC_ARROW)
         user32.RegisterClassExW(byref(newclass))
 
@@ -722,7 +687,9 @@ class App(MainWin):
 
         for k, v in self.color_values.items():
             if v != 100:
-                getattr(self.mediaplayer, f'set_{k}')((v - 100) / 100)
+                func = f'set_{k}'
+                if hasattr(self.mediaplayer, func):
+                    getattr(self.mediaplayer, func)((v - 100) / 100)
 
         ########################################
         #
@@ -861,7 +828,7 @@ class App(MainWin):
     #
     ########################################
     def create_systray(self):
-        self.trayicon = TrayIcon(self, self.h_icon, WM_USER, APP_NAME, show = False)
+        self.trayicon = TrayIcon(self, self.h_icon, WM_USER, f'{APP_NAME} [{ENGINES[self.engine]}]', show = False)
 
         ########################################
         #
@@ -1088,15 +1055,12 @@ class App(MainWin):
         sub_file = show_open_file_dialog(self, 'Load Subtitles', '.srt',
             'Subtitle files (*.srt;*.webvtt;*.vtt)\0*.srt;*.webvtt;*.vtt\0\0')
         if sub_file:
-
             ok = self.mediaplayer.load_sub_file(sub_file)
             if not ok:
                 return
-
             ok = TRUE
             while ok:
                 ok = user32.RemoveMenu(self.h_menu_sub_tracks, 0, MF_BYPOSITION)
-
             self._active_sub_track_id = None
             sub_tracks = self.mediaplayer.get_sub_tracks()
             if sub_tracks:
@@ -1109,9 +1073,7 @@ class App(MainWin):
                     user32.AppendMenuW(self.h_menu_sub_tracks, MF_STRING | (MF_CHECKED if enabled else 0), idm, name)
                     if enabled:
                         self._active_sub_track_id = track_id
-
                 user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_ENABLED)
-
         self.activate_window()
 
     ########################################
@@ -1133,8 +1095,10 @@ class App(MainWin):
         self.media_duration = 0
         self.mediaplayer.close_file()
 
-        self.set_window_text(f'{APP_NAME} [{self.engine_name}]')
-        self.trayicon.set_tooltip(f'{APP_NAME} [{self.engine_name}]')
+        txt = f'{APP_NAME} [{ENGINES[self.engine]}]'
+        self.set_window_text(txt)
+        self.trayicon.set_tooltip(txt)
+
         self.statusbar.set_text('Closed', IDX_STATUSBAR_PART_STATE)
         self.statusbar.set_text('', IDX_STATUSBAR_PART_TIME)
 
@@ -1186,7 +1150,7 @@ class App(MainWin):
         user32.DialogBoxParamW(
             HMOD_RESOURCES,
             MAKEINTRESOURCEW(IDD_ABOUT),
-            None,
+            self.hwnd,
             dialog_proc,
             NULL
         )
@@ -1201,7 +1165,7 @@ class App(MainWin):
         ########################################
         #
         ########################################
-        def _on_snapshot(image_type):
+        def _on_snapshot(image_type, new_file = tmp_file):
             if image_type:
                 ext = image_type.lower()
                 filename = f'{os.path.basename(self.media_file)}_snapshot_{t:.3f}'
@@ -1209,9 +1173,9 @@ class App(MainWin):
                 if img_file:
                     if os.path.isfile(img_file):
                         os.unlink(img_file)
-                    os.rename(tmp_file, img_file)
+                    os.rename(new_file, img_file)
                 else:
-                    os.unlink(tmp_file)
+                    os.unlink(new_file)
 
         self.mediaplayer.take_snapshot(tmp_file, _on_snapshot)
 
@@ -1237,6 +1201,23 @@ class App(MainWin):
     ########################################
     #
     ########################################
+    def download_engine(self, engine_name):
+        engine_zip = f'engine_{engine_name}.zip'
+        exec_info = SHELLEXECUTEINFOW()
+        exec_info.nShow = SW_HIDE
+        exec_info.fMask = SEE_MASK_NOCLOSEPROCESS
+        exec_info.lpFile = 'powershell.exe'
+        exec_info.lpParameters = f'"{os.path.join(RES_DIR, "download_engine.ps1")}" "https://github.com/59de44955ebd/{APP_NAME}/releases/download/engines" {engine_zip} "{APP_DIR}"'
+        if not shell32.ShellExecuteExW(byref(exec_info)):
+            return 1
+        kernel32.WaitForSingleObject(exec_info.hProcess, INFINITE)
+        exit_code = DWORD()
+        kernel32.GetExitCodeProcess(exec_info.hProcess, byref(exit_code))
+        return exit_code.value
+
+    ########################################
+    #
+    ########################################
     def action_color_controls(self):
         sliders = {}
         statics = {}
@@ -1255,8 +1236,15 @@ class App(MainWin):
         ########################################
         def _dialog_proc_color_controls(hwnd, msg, wparam, lparam):
             if msg == WM_INITDIALOG:
-                for i, k in enumerate(['brightness', 'contrast', 'hue', 'saturation']):
-                    hwnd_slider = user32.GetDlgItem(hwnd, [IDC_CC_TRACKBAR_BRIGHTNESS, IDC_CC_TRACKBAR_CONTRAST, IDC_CC_TRACKBAR_HUE, IDC_CC_TRACKBAR_SATURATION][i])
+                for i, k in enumerate(['brightness', 'contrast', 'hue', 'saturation', 'gamma']):
+                    hwnd_slider = user32.GetDlgItem(hwnd, [IDC_CC_TRACKBAR_BRIGHTNESS, IDC_CC_TRACKBAR_CONTRAST, IDC_CC_TRACKBAR_HUE, IDC_CC_TRACKBAR_SATURATION, IDC_CC_TRACKBAR_GAMMA][i])
+                    statics[k] = user32.GetDlgItem(hwnd, [IDC_CC_STATIC_BRIGHTNESS, IDC_CC_STATIC_CONTRAST, IDC_CC_STATIC_HUE, IDC_CC_STATIC_SATURATION, IDC_CC_STATIC_GAMMA][i])
+                    if k == 'gamma' and not hasattr(self.mediaplayer, 'set_gamma'):
+                        user32.ShowWindow(hwnd_slider, SW_HIDE)
+                        user32.ShowWindow(statics[k], SW_HIDE)
+                        user32.ShowWindow(user32.GetDlgItem(hwnd, IDC_CC_LABEL_GAMMA), SW_HIDE)
+                        continue
+
                     rc = RECT()
                     user32.GetWindowRect(hwnd_slider, byref(rc))
                     user32.MapWindowPoints(None, hwnd, byref(rc), 2)
@@ -1268,7 +1256,6 @@ class App(MainWin):
                     sliders[k] = slider
                     slider.set_pos(self.color_values[k] / 200)
                     slider.connect(EVENT_POS_CHANGED, lambda pos, k=k: _pos_changed(pos, k))
-                    statics[k] = user32.GetDlgItem(hwnd, [IDC_CC_STATIC_BRIGHTNESS, IDC_CC_STATIC_CONTRAST, IDC_CC_STATIC_HUE, IDC_CC_STATIC_SATURATION][i])
                     user32.SetWindowTextW(statics[k], str(self.color_values[k] - 100))
 
                 if self.is_dark:
@@ -1584,11 +1571,11 @@ class App(MainWin):
             if self.use_meta_title:
                try:
                     meta = json.loads(pymediainfo.MediaInfo.parse(self.media_file, output='JSON', full=False, cover_data=False))
-                    self.set_window_text(f'{meta["media"]["track"][0]["Title"]} - {APP_NAME} [{self.engine_name}]')
+                    self.set_window_text(f'{meta["media"]["track"][0]["Title"]}')
                     return
                except:
                     pass
-            self.set_window_text(f'{os.path.basename(self.media_file)} - {APP_NAME} [{self.engine_name}]')
+            self.set_window_text(f'{os.path.basename(self.media_file)}')
 
     ########################################
     #
@@ -1663,10 +1650,6 @@ class App(MainWin):
         if had_media:
             self.action_close()
 
-#        was_playing = self.mediaplayer.is_playing()
-#        if was_playing:
-#            self.timer_stop()
-
         is_url = '://' in filename
         if not is_url:
             ext = os.path.splitext(filename)[1].lower()
@@ -1690,8 +1673,9 @@ class App(MainWin):
 
             self.media_file = filename
 
-            self.set_window_text(f'{caption if caption else os.path.basename(filename)} - {APP_NAME} [{self.engine_name}]')
-            self.trayicon.set_tooltip(f'{caption if caption else os.path.basename(filename)} - {APP_NAME} [{self.engine_name}]')
+            txt = f'{caption if caption else os.path.basename(filename)}'
+            self.set_window_text(txt)
+            self.trayicon.set_tooltip(txt)
 
             self.update_counter = 0
 
@@ -1744,7 +1728,7 @@ class App(MainWin):
             if self.use_meta_title and caption is None:
                 try:
                     meta = json.loads(pymediainfo.MediaInfo.parse(self.media_file, output='JSON', full=False, cover_data=False))
-                    self.set_window_text(f'{meta["media"]["track"][0]["Title"]} - {APP_NAME} [{self.engine_name}]')
+                    self.set_window_text(f'{meta["media"]["track"][0]["Title"]}')
                 except:
                     pass
 
@@ -1817,7 +1801,9 @@ class App(MainWin):
     #
     ########################################
     def update_ui_reset(self):
+        self.slider_seek.set_pos(0)
         self.slider_seek.enable_window(False)
+
         for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_SKIP_BACK, IDM_SKIP_FORWARD):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, FALSE)
         for idm in (
@@ -1935,6 +1921,8 @@ class App(MainWin):
                 return
             self.timer_stop()
             self.update_ui_player_state(STATE_STOPPED)
+            if self.engine == IDM_ENGINE_MPV:
+                self.mediaplayer.set_time(0)
 
     ########################################
     # Updates slider position and time display in statusbar

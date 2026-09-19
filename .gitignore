@@ -7,3 +7,6 @@
 _backup.rar
 /*.spec
 /plugins/
+/engine_directshow/
+/engine_mpv/
+/engine_vlc/
