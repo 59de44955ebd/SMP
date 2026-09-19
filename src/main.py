@@ -56,16 +56,16 @@ if not HAS_VLC:
 MPV_PATH = os.path.join(APP_DIR, 'engine_mpv', 'libmpv-2.dll')
 HAS_MPV = os.path.isfile(MPV_PATH)
 
-engine = APP_SETTINGS.get('engine', 'WebView')
+engine = APP_SETTINGS.get('engine', 'webview')
 
 if (
-    (engine == 'DirectShow' and not HAS_DIRECTSHOW) or
+    (engine == 'directshow' and not HAS_DIRECTSHOW) or
     (engine == 'mpv' and not HAS_MPV) or
-    (engine == 'VLC' and not HAS_VLC)
+    (engine == 'vlc' and not HAS_VLC)
 ):
-    engine = 'WebView'
+    engine = 'webview'
 
-if engine == 'DirectShow':
+if engine == 'directshow':
     import dshow_player
     dshow_player.init(DIRECTSHOW_PATH)
     Player = dshow_player.Player
@@ -75,7 +75,7 @@ elif engine == 'mpv':
     mpv_player.init(MPV_PATH)
     Player = mpv_player.Player
 
-elif engine == 'VLC':
+elif engine == 'vlc':
     import vlc_player
     vlc_player.init(VLC_PATH)
     Player = vlc_player.Player
@@ -277,7 +277,7 @@ class App(MainWin):
         self.create_systray()
         self.create_playlist(splitter_pos)
 
-        if self.engine != 'WebView':
+        if self.engine != 'webview':
             self.h_menu_audio_tracks = user32.CreateMenu()
             h_menu_audio = user32.GetSubMenu(self.h_menu, IDX_MENU_AUDIO)
             user32.InsertMenuW(h_menu_audio, 0, MF_BYPOSITION | MF_POPUP, self.h_menu_audio_tracks, 'Audio &Track')
@@ -1674,7 +1674,7 @@ class App(MainWin):
 
                     user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_ENABLED)
 
-                if self.engine != 'WebView':
+                if self.engine != 'webview':
                     self._active_video_track_id = None
                     video_tracks = self.mediaplayer.get_video_tracks()
                     if video_tracks:
@@ -1703,7 +1703,7 @@ class App(MainWin):
                     pass
 
 
-            if self.engine != 'WebView':
+            if self.engine != 'webview':
                 self._active_audio_track_id = None
                 audio_tracks = self.mediaplayer.get_audio_tracks()
                 if audio_tracks:
@@ -1787,7 +1787,7 @@ class App(MainWin):
         taskbar.SetProgressState(self.hwnd, TBPF.NOPROGRESS)
         self._state = STATE_STOPPED
 
-        if self.engine != 'WebView':
+        if self.engine != 'webview':
             ok = TRUE
             while ok:
                 ok = user32.RemoveMenu(self.h_menu_audio_tracks, 0, MF_BYPOSITION)
