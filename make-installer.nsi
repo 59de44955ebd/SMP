@@ -44,6 +44,8 @@ Setcompressor LZMA
 ;--------------------------------
 
 !define MUI_ABORTWARNING
+!define MUI_FINISHPAGE_RUN "$INSTDIR\SMP.exe"
+!define MUI_ICON "resources\app.ico"
 
 ;--------------------------------
 ;Pages
@@ -59,6 +61,8 @@ Setcompressor LZMA
 
 ;Page instfiles
 !insertmacro MUI_PAGE_INSTFILES
+
+!insertmacro MUI_PAGE_FINISH
 
 ;UninstPage uninstConfirm
 !insertmacro MUI_UNPAGE_CONFIRM
