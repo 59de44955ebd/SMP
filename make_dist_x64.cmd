@@ -75,9 +75,7 @@ echo.
 echo ****************************************
 echo Copying resources...
 echo ****************************************
-::xcopy /e filters "dist\%APP_NAME%\%DATA_DIR%\filters\" >nul
 copy "src\webview2\native\win-amd64\loader.dll" "dist\%APP_NAME%\%DATA_DIR%\"
-
 copy "resources\index.htm" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\soundbank.sf2" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\spessasynth_core.js" "dist\%APP_NAME%\%DATA_DIR%\"
@@ -85,8 +83,6 @@ copy "resources\spessasynth_lib.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\spessasynth_processor.min.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\srt.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\stb-vorbis.js" "dist\%APP_NAME%\%DATA_DIR%\"
-copy "resources\download_engine.ps1" "dist\%APP_NAME%\%DATA_DIR%\"
-copy "resources\update_app.ps1" "dist\%APP_NAME%\%DATA_DIR%\"
 exit /B
 
 

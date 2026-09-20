@@ -4,6 +4,10 @@ import pymediainfo
 import sys
 import traceback
 
+import urllib.request
+import xml.etree.ElementTree as ET
+import zipfile
+
 from winapp.mainwin_themed import *
 from winapp.controls_themed.listbox import *
 from winapp.controls_themed.static import *
@@ -561,8 +565,8 @@ class App(MainWin):
                             user32.EnableWindow(user32.GetDlgItem(hwnd, IDCANCEL), FALSE)
                             engine_name = ENGINES[idm]
                             engine_dir = os.path.join(APP_DIR, f'engine_{engine_name}')
-                            exit_code = self.download_engine(engine_name)
-                            if exit_code != 0 or not os.path.isdir(engine_dir):
+                            ok = self.download_engine(engine_name)
+                            if not ok or not os.path.isdir(engine_dir):
                                 user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), 'Server not found.\n\nPlease check your internet connection or try again later.')
                                 user32.EnableWindow(user32.GetDlgItem(hwnd, IDOK), TRUE)
                                 user32.EnableWindow(user32.GetDlgItem(hwnd, IDCANCEL), TRUE)
@@ -573,16 +577,30 @@ class App(MainWin):
                             user32.EndDialog(hwnd, 0)
 
                 elif self.is_dark:
-                    if msg == WM_CTLCOLORDLG:
-                        gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                        return DARK_BG_BRUSH
+                    if msg == WM_ERASEBKGND:
+                        return dark_OnEraseBkgnd(hwnd, wparam)
+
+                    elif msg == WM_PAINT:
+                        return dark_OnPaint(hwnd)
+
+                    elif msg == WM_CTLCOLORDLG:
+                        return dark_OnCtlColorDlg(wparam)
+
                     elif msg == WM_CTLCOLORSTATIC:
-                        gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
-                        gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                        return DARK_BG_BRUSH
+                        return dark_OnCtlColorStaticMsgBox(wparam)
+
                     elif msg == WM_CTLCOLORBTN:
-                        gdi32.SetDCBrushColor(wparam, DARK_BG_COLOR)
-                        return gdi32.GetStockObject(DC_BRUSH)
+                        return dark_OnCtlColorBtn(wparam)
+
+                else:
+                    if msg == WM_ERASEBKGND:
+                        return light_OnEraseBkgnd(hwnd, wparam)
+
+                    elif msg == WM_PAINT:
+                        return light_OnPaint(hwnd)
+
+                    elif msg == WM_CTLCOLORSTATIC:
+                        return light_OnCtlColorStaticMsgBox(wparam)
 
                 return FALSE
 
@@ -939,14 +957,16 @@ class App(MainWin):
         ########################################
         def _dialog_proc_enter_url(hwnd, msg, wparam, lparam):
             if msg == WM_INITDIALOG:
+                hwnd_edit = user32.GetDlgItem(hwnd, IDC_EDIT_FILENAME)
                 if self.is_dark:
                     dwm_use_dark_mode(hwnd, True)
                     uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDOK), 'DarkMode_Explorer', None)
                     uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDCANCEL), 'DarkMode_Explorer', None)
-                hwnd_edit = user32.GetDlgItem(hwnd, IDC_EDIT_FILENAME)
-                user32.SetWindowLongA(hwnd_edit, GWL_EXSTYLE, user32.GetWindowLongA(hwnd_edit, GWL_EXSTYLE) & ~WS_EX_STATICEDGE & ~WS_EX_CLIENTEDGE)
-                user32.SetWindowLongA(hwnd_edit, GWL_STYLE, user32.GetWindowLongA(hwnd_edit, GWL_STYLE) | WS_BORDER)
-                user32.SetWindowPos(hwnd_edit, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
+
+                    user32.SetWindowLongA(hwnd_edit, GWL_EXSTYLE, user32.GetWindowLongA(hwnd_edit, GWL_EXSTYLE) & ~WS_EX_STATICEDGE & ~WS_EX_CLIENTEDGE)
+                    user32.SetWindowLongA(hwnd_edit, GWL_STYLE, user32.GetWindowLongA(hwnd_edit, GWL_STYLE) | WS_BORDER)
+                    user32.SetWindowPos(hwnd_edit, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
+
                 center_window(hwnd, self.hwnd)
                 user32.SetFocus(hwnd_edit)
 
@@ -968,21 +988,33 @@ class App(MainWin):
                     user32.EndDialog(hwnd, 0)
 
             elif self.is_dark:
-                if msg == WM_CTLCOLORDLG:
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                if msg == WM_ERASEBKGND:
+                    return dark_OnEraseBkgnd(hwnd, wparam)
+
+                elif msg == WM_PAINT:
+                    return dark_OnPaint(hwnd)
+
+                elif msg == WM_CTLCOLORDLG:
+                    return dark_OnCtlColorDlg(wparam)
+
                 elif msg == WM_CTLCOLORSTATIC:
-                    gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                    return dark_OnCtlColorStaticMsgBox(wparam)
+
                 elif msg == WM_CTLCOLORBTN:
-                    gdi32.SetDCBrushColor(wparam, DARK_BG_COLOR)
-                    return gdi32.GetStockObject(DC_BRUSH)
+                    return dark_OnCtlColorBtn(wparam)
+
                 elif msg == WM_CTLCOLOREDIT:
-                    gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
-                    gdi32.SetBkColor(wparam, DARK_CONTROL_BG_COLOR)
-                    gdi32.SetDCBrushColor(wparam, DARK_CONTROL_BG_COLOR)
-                    return gdi32.GetStockObject(DC_BRUSH)
+                    return dark_OnCtlColorEdit(wparam)
+
+            else:
+                if msg == WM_ERASEBKGND:
+                    return light_OnEraseBkgnd(hwnd, wparam)
+
+                elif msg == WM_PAINT:
+                    return light_OnPaint(hwnd)
+
+                elif msg == WM_CTLCOLORSTATIC:
+                    return light_OnCtlColorStaticMsgBox(wparam)
 
             return FALSE
 
@@ -1075,16 +1107,31 @@ class App(MainWin):
                     shell32.ShellExecuteW(None, None, 'https://github.com/59de44955ebd/SMP', None, None, SW_SHOWNORMAL)
 
             elif self.is_dark:
-                if msg == WM_CTLCOLORDLG:
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+
+                if msg == WM_ERASEBKGND:
+                    return dark_OnEraseBkgnd(hwnd, wparam)
+
+                elif msg == WM_PAINT:
+                    return dark_OnPaint(hwnd)
+
+                elif msg == WM_CTLCOLORDLG:
+                    return dark_OnCtlColorDlg(wparam)
+
                 elif msg == WM_CTLCOLORSTATIC:
-                    gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                    return dark_OnCtlColorStaticMsgBox(wparam)
+
                 elif msg == WM_CTLCOLORBTN:
-                    gdi32.SetDCBrushColor(wparam, DARK_BG_COLOR)
-                    return gdi32.GetStockObject(DC_BRUSH)
+                    return dark_OnCtlColorBtn(wparam)
+            else:
+
+                if msg == WM_ERASEBKGND:
+                    return light_OnEraseBkgnd(hwnd, wparam)
+
+                elif msg == WM_PAINT:
+                    return light_OnPaint(hwnd)
+
+                elif msg == WM_CTLCOLORSTATIC:
+                    return light_OnCtlColorStaticMsgBox(wparam)
 
             return FALSE
 
@@ -1135,27 +1182,46 @@ class App(MainWin):
     #
     ########################################
     def action_update_app(self):
-        command = f'"{os.path.join(RES_DIR, "update_app.ps1")}" "{APP_NAME}" {APP_MAJORVERSION}.{APP_MINORVERSION} "https://github.com/59de44955ebd/{APP_NAME}"'
+        base_url = f'https://github.com/59de44955ebd/{APP_NAME}/'
+        try:
+            url = f'{base_url}tags.atom'
+            xml = urllib.request.urlopen(url).read()
+        except:
+            return show_message_box(self, "Update server not found.\n\nPlease check your internet connection or try again later.", "Update Checker", MB_ICONWARNING | MB_OK)
+
+        tag = ET.fromstring(xml).findall("./{*}entry/{*}title")[0].text
+        if float(tag[1:]) <= float(f'{APP_MAJORVERSION}.{APP_MINORVERSION}'):
+            return show_message_box(self, "You are already using the latest version.", "Update Checker", MB_ICONINFORMATION | MB_OK)
+
         if os.path.isfile(os.path.join(os.path.dirname(sys.executable), 'uninstall.exe')):
-            command += f' "{APP_NAME}-x64-setup.exe"'
-        shell32.ShellExecuteW(None, None, 'powershell.exe', command, None, SW_HIDE)
+            if show_message_box(self, "A newer version was found. Do you want to install it now?\n\nAnswering 'Yes' will quit the application.", "Update Checker", MB_ICONQUESTION | MB_YESNO) == IDYES:
+                setup_exe = f'{APP_NAME}-x64-setup.exe'
+                url = f'{base_url}releases/download/{tag}/{setup_exe}'
+                tmp_file = os.path.join(os.environ['TMP'], setup_exe)
+                with open(tmp_file, 'wb') as f:
+                    f.write(urllib.request.urlopen(url).read())
+                shell32.ShellExecuteW(None, None, tmp_file, None, None, SW_SHOWNORMAL)
+                self.quit()
+        else:
+           if show_message_box(self, "A newer version was found. Download it now?", "Update Checker", MB_ICONQUESTION | MB_YESNO) == IDYES:
+                shell32.ShellExecuteW(None, None, f'{base_url}releases/{tag}', None, None, SW_SHOWNORMAL)
 
     ########################################
     #
     ########################################
     def download_engine(self, engine_name):
-        engine_zip = f'engine_{engine_name}.zip'
-        exec_info = SHELLEXECUTEINFOW()
-        exec_info.nShow = SW_HIDE
-        exec_info.fMask = SEE_MASK_NOCLOSEPROCESS
-        exec_info.lpFile = 'powershell.exe'
-        exec_info.lpParameters = f'"{os.path.join(RES_DIR, "download_engine.ps1")}" "https://github.com/59de44955ebd/{APP_NAME}/releases/download/engines" {engine_zip} "{APP_DIR}"'
-        if not shell32.ShellExecuteExW(byref(exec_info)):
-            return 1
-        kernel32.WaitForSingleObject(exec_info.hProcess, INFINITE)
-        exit_code = DWORD()
-        kernel32.GetExitCodeProcess(exec_info.hProcess, byref(exit_code))
-        return exit_code.value
+        try:
+            engine_zip = f'engine_{engine_name}.zip'
+            url = f'https://github.com/59de44955ebd/{APP_NAME}/releases/download/engines/{engine_zip}'
+            tmp_file = os.path.join(os.environ['TMP'], engine_zip)
+            with open(tmp_file, 'wb') as f:
+                f.write(urllib.request.urlopen(url).read())
+            with zipfile.ZipFile(tmp_file, 'r') as zip_ref:
+                zip_ref.extractall(APP_DIR)
+            os.unlink(tmp_file)
+            return True
+        except:
+            return False
 
     ########################################
     #
@@ -1224,15 +1290,13 @@ class App(MainWin):
 
             elif self.is_dark:
                 if msg == WM_CTLCOLORDLG:
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                    return dark_OnCtlColorDlg(wparam)
+
                 elif msg == WM_CTLCOLORSTATIC:
-                    gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                    return dark_OnCtlColorStatic(wparam)
+
                 elif msg == WM_CTLCOLORBTN:
-                    gdi32.SetDCBrushColor(wparam, DARK_BG_COLOR)
-                    return gdi32.GetStockObject(DC_BRUSH)
+                    return dark_OnCtlColorBtn(wparam)
 
             return FALSE
 
@@ -1287,12 +1351,12 @@ class App(MainWin):
 
             elif self.is_dark:
                 if msg == WM_CTLCOLORDLG:
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                    return dark_OnCtlColorDlg(wparam)
                 elif msg == WM_CTLCOLORSTATIC:
-                    gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                    return dark_OnCtlColorStatic(wparam)
+            else:
+                if msg == WM_CTLCOLORSTATIC:
+                    return light_OnCtlColorStaticMsgBox(wparam)
 
             return FALSE
 

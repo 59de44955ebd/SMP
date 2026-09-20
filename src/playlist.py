@@ -484,14 +484,14 @@ class PlayList(ListBox):
         ########################################
         def _dialog_proc_edit_title(hwnd, msg, wparam, lparam):
             if msg == WM_INITDIALOG:
+                hwnd_edit = user32.GetDlgItem(hwnd, IDC_EDIT_FILENAME)
                 if self.is_dark:
                     dwm_use_dark_mode(hwnd, True)
                     uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDOK), 'DarkMode_Explorer', None)
                     uxtheme.SetWindowTheme(user32.GetDlgItem(hwnd, IDCANCEL), 'DarkMode_Explorer', None)
-                hwnd_edit = user32.GetDlgItem(hwnd, IDC_EDIT_FILENAME)
-                user32.SetWindowLongA(hwnd_edit, GWL_EXSTYLE, user32.GetWindowLongA(hwnd_edit, GWL_EXSTYLE) & ~WS_EX_STATICEDGE & ~WS_EX_CLIENTEDGE)
-                user32.SetWindowLongA(hwnd_edit, GWL_STYLE, user32.GetWindowLongA(hwnd_edit, GWL_STYLE) | WS_BORDER)
-                user32.SetWindowPos(hwnd_edit, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
+                    user32.SetWindowLongA(hwnd_edit, GWL_EXSTYLE, user32.GetWindowLongA(hwnd_edit, GWL_EXSTYLE) & ~WS_EX_STATICEDGE & ~WS_EX_CLIENTEDGE)
+                    user32.SetWindowLongA(hwnd_edit, GWL_STYLE, user32.GetWindowLongA(hwnd_edit, GWL_STYLE) | WS_BORDER)
+                    user32.SetWindowPos(hwnd_edit, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
                 user32.SetWindowTextW(hwnd_edit, media_item.title or os.path.basename(media_item.filename))
                 user32.SendMessageW(hwnd_edit, EM_SETSEL, 0, -1)
                 center_window(hwnd, self.parent_window.hwnd)
@@ -515,21 +515,26 @@ class PlayList(ListBox):
                     user32.EndDialog(hwnd, 0)
 
             elif self.is_dark:
-                if msg == WM_CTLCOLORDLG:
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                if msg == WM_ERASEBKGND:
+                    return dark_OnEraseBkgnd(hwnd, wparam)
+                elif msg == WM_PAINT:
+                    return dark_OnPaint(hwnd)
+                elif msg == WM_CTLCOLORDLG:
+                    return dark_OnCtlColorDlg(wparam)
                 elif msg == WM_CTLCOLORSTATIC:
-                    gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
-                    gdi32.SetBkColor(wparam, DARK_BG_COLOR)
-                    return DARK_BG_BRUSH
+                    return dark_OnCtlColorStaticMsgBox(wparam)
                 elif msg == WM_CTLCOLORBTN:
-                    gdi32.SetDCBrushColor(wparam, DARK_BG_COLOR)
-                    return gdi32.GetStockObject(DC_BRUSH)
+                    return dark_OnCtlColorBtn(wparam)
                 elif msg == WM_CTLCOLOREDIT:
-                    gdi32.SetTextColor(wparam, DARK_TEXT_COLOR)
-                    gdi32.SetBkColor(wparam, DARK_CONTROL_BG_COLOR)
-                    gdi32.SetDCBrushColor(wparam, DARK_CONTROL_BG_COLOR)
-                    return gdi32.GetStockObject(DC_BRUSH)
+                    return dark_OnCtlColorEdit(wparam)
+
+            else:
+                if msg == WM_ERASEBKGND:
+                    return light_OnEraseBkgnd(hwnd, wparam)
+                elif msg == WM_PAINT:
+                    return light_OnPaint(hwnd)
+                elif msg == WM_CTLCOLORSTATIC:
+                    return light_OnCtlColorStaticMsgBox(wparam)
 
             return FALSE
 
