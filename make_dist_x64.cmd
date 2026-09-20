@@ -95,15 +95,9 @@ rd /q /s "dist\%APP_NAME%\%DATA_DIR%\pymediainfo-7.0.1.dist-info"
 del /q "dist\%APP_NAME%\%DATA_DIR%\api-ms-win-*.dll"
 del "dist\%APP_NAME%\%DATA_DIR%\VCRUNTIME140.dll"
 del "dist\%APP_NAME%\%DATA_DIR%\VCRUNTIME140_1.dll"
-del "dist\%APP_NAME%\%DATA_DIR%\libcrypto-3.dll"
-del "dist\%APP_NAME%\%DATA_DIR%\libssl-3.dll"
-del "dist\%APP_NAME%\%DATA_DIR%\_ssl.pyd"
-::del "dist\%APP_NAME%\%DATA_DIR%\select.pyd"
 del "dist\%APP_NAME%\%DATA_DIR%\ucrtbase.dll"
-del "dist\%APP_NAME%\%DATA_DIR%\unicodedata.pyd"
 del "dist\%APP_NAME%\%DATA_DIR%\_bz2.pyd"
 del "dist\%APP_NAME%\%DATA_DIR%\_lzma.pyd"
-::del "dist\%APP_NAME%\%DATA_DIR%\_socket.pyd"
 exit /B
 
 
