@@ -55,7 +55,8 @@ class Player(WebView2):
 
         super().__init__(
             parent_hwnd = parent_window.hwnd,
-            url = 'file:///' + os.path.join(RES_DIR, 'index.htm').replace('\\', '/')
+            url = 'file:///' + os.path.join(RES_DIR, 'index.htm').replace('\\', '/'),
+            is_hidden = True,
         )
 
         ########################################
@@ -143,6 +144,8 @@ class Player(WebView2):
         self._time = 0
         self._playing = False
 
+        self.set_visible(False)
+
     ########################################
     #
     ########################################
@@ -171,12 +174,14 @@ class Player(WebView2):
     #
     ########################################
     def load_media_file(self, media_file: str, on_parsed, **kwargs) -> bool:
-        self.close_file()
+        if self._media_file:
+            self.close_file()
         self.on_parsed = on_parsed
         if self._initialized:
             self._load(media_file)
         else:
             self._media_file = media_file
+        self.set_visible(True)
 
     ########################################
     #

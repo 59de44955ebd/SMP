@@ -34,7 +34,10 @@ class COREWEBVIEW2_PHYSICAL_KEY_STATUS(Structure):
 
 # Referenced but not implemented (yet)
 ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler = LPVOID
-ICoreWebView2FrameCreatedEventHandler = LPVOID
+ICoreWebView2FindActiveMatchIndexChangedEventHandler = LPVOID
+ICoreWebView2FindMatchCountChangedEventHandler = LPVOID
+ICoreWebView2FindStartCompletedHandler = LPVOID
+ICoreWebView2FrameDestroyedEventHandler = LPVOID
 ICoreWebView2IsDocumentPlayingAudioChangedEventHandler = LPVOID
 ICoreWebView2IsMutedChangedEventHandler = LPVOID
 ICoreWebView2MoveFocusRequestedEventHandler = LPVOID
@@ -454,6 +457,66 @@ class ICoreWebView2FindOptions(IUnknown):
 class ICoreWebView2FocusChangedEventHandler(IUnknown):
     _case_insensitive_ = True
     _iid_ = GUID('{05ea24bd-6452-4926-9014-4b82b498135d}')
+    _idlflags_ = []
+
+class ICoreWebView2Frame(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{f1131a5e-9ba9-11eb-a8b3-0242ac130003}')
+    _idlflags_ = []
+
+class ICoreWebView2Frame2(ICoreWebView2Frame):
+    _case_insensitive_ = True
+    _iid_ = GUID('{7a6a5834-d185-4dbf-b63f-4a9bc43107d4}')
+    _idlflags_ = []
+
+class ICoreWebView2Frame7(ICoreWebView2Frame2):
+    _case_insensitive_ = True
+    _iid_ = GUID('{3598cfa2-d85d-5a9f-9228-4dde1f59ec64}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameChildFrameCreatedEventHandler(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{569e40e7-46b7-563d-83ae-1073155664d7}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameContentLoadingEventHandler(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{0d6156f2-d332-49a7-9e03-7d8f2feeee54}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameCreatedEventArgs(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{4d6e7b5e-9baa-11eb-a8b3-0242ac130003}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameCreatedEventHandler(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{38059770-9baa-11eb-a8b3-0242ac130003}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameDOMContentLoadedEventHandler(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{38d9520d-340f-4d1e-a775-43fce9753683}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameNameChangedEventHandler(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{435c7dc8-9baa-11eb-a8b3-0242ac130003}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameNavigationCompletedEventHandler(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{609302ad-0e36-4f9a-a210-6a45272842a9}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameNavigationStartingEventHandler(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{e79908bf-2d5d-4968-83db-263fea2c1da3}')
+    _idlflags_ = []
+
+class ICoreWebView2FrameWebMessageReceivedEventHandler(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{e371e005-6d1d-4517-934b-a8f1629c62a5}')
     _idlflags_ = []
 
 class ICoreWebView2GetCookiesCompletedHandler(IUnknown):
@@ -1838,14 +1901,14 @@ ICoreWebView2Find._methods_ = [
         ( ['retval', 'out'], POINTER(INT), 'value' )),
 
     COMMETHOD([], HRESULT, 'add_ActiveMatchIndexChanged',
-        ( ['in'], POINTER(IUnknown), 'eventHandler' ),                 # ICoreWebView2FindActiveMatchIndexChangedEventHandler *eventHandler
+        ( ['in'], POINTER(ICoreWebView2FindActiveMatchIndexChangedEventHandler), 'eventHandler' ),
         ( ['out'], POINTER(EventRegistrationToken), 'token' )),
 
     COMMETHOD([], HRESULT, 'remove_ActiveMatchIndexChanged',
         ( ['in'], EventRegistrationToken, 'token' )),
 
     COMMETHOD([], HRESULT, 'add_MatchCountChanged',
-        ( ['in'], POINTER(IUnknown), 'eventHandler' ),                 # ICoreWebView2FindMatchCountChangedEventHandler *eventHandler
+        ( ['in'], POINTER(ICoreWebView2FindMatchCountChangedEventHandler), 'eventHandler' ),
         ( ['out'], POINTER(EventRegistrationToken), 'token' )),
 
     COMMETHOD([], HRESULT, 'remove_MatchCountChanged',
@@ -1853,7 +1916,7 @@ ICoreWebView2Find._methods_ = [
 
     COMMETHOD([], HRESULT, 'Start',
         ( ['in'], POINTER(ICoreWebView2FindOptions), 'options' ),
-        ( ['in'], POINTER(IUnknown), 'handler' )),                  # ICoreWebView2FindStartCompletedHandler *handler
+        ( ['in'], POINTER(ICoreWebView2FindStartCompletedHandler), 'handler' )),
 
     COMMETHOD([], HRESULT, 'FindNext'),
 
@@ -2522,4 +2585,149 @@ ICoreWebView2WindowCloseRequestedEventHandler._methods_ = [
     COMMETHOD([], HRESULT, 'Invoke',
         ( ['in'], POINTER(ICoreWebView2), 'sender' ),
         ( ['in'], POINTER(IUnknown), 'args' )),
+]
+
+ICoreWebView2Frame._methods_ = [
+    COMMETHOD([], HRESULT, 'get_Name',
+        ( ['retval', 'out'], POINTER(LPWSTR), 'title' )),
+
+    COMMETHOD([], HRESULT, 'add_NameChanged',
+        ( ['in'], POINTER(ICoreWebView2FrameNameChangedEventHandler), 'eventHandler' ),
+        ( ['out'], POINTER(EventRegistrationToken), 'token' )),
+
+    COMMETHOD([], HRESULT, 'remove_NameChanged',
+        ( ['in'], EventRegistrationToken, 'token' )),
+
+    COMMETHOD([], HRESULT, 'AddHostObjectToScriptWithOrigins',
+        ( ['in'], LPCWSTR, 'name' ),
+        ( ['in'], POINTER(VARIANT), 'object' ),
+        ( ['in'], UINT32, 'originsCount' ),
+        ( ['in'], POINTER(LPCWSTR), 'origins' )),
+
+    COMMETHOD([], HRESULT, 'RemoveHostObjectFromScript',
+        ( ['in'], LPCWSTR, 'name' )),
+
+    COMMETHOD([], HRESULT, 'add_Destroyed',
+        ( ['in'], POINTER(ICoreWebView2FrameDestroyedEventHandler), 'eventHandler' ),
+        ( ['out'], POINTER(EventRegistrationToken), 'token' )),
+
+    COMMETHOD([], HRESULT, 'remove_Destroyed',
+        ( ['in'], EventRegistrationToken, 'token' )),
+
+    COMMETHOD([], HRESULT, 'IsDestroyed',
+        ( ['retval', 'out'], POINTER(BOOL), 'destroyed' )),
+]
+
+ICoreWebView2Frame2._methods_ = [
+    COMMETHOD([], HRESULT, 'add_NavigationStarting',
+        ( ['in'], POINTER(ICoreWebView2FrameNavigationStartingEventHandler), 'eventHandler' ),
+        ( ['out'], POINTER(EventRegistrationToken), 'token' )),
+
+    COMMETHOD([], HRESULT, 'remove_NavigationStarting',
+        ( ['in'], EventRegistrationToken, 'token' )),
+
+    COMMETHOD([], HRESULT, 'add_ContentLoading',
+        ( ['in'], POINTER(ICoreWebView2FrameContentLoadingEventHandler), 'eventHandler' ),
+        ( ['out'], POINTER(EventRegistrationToken), 'token' )),
+
+    COMMETHOD([], HRESULT, 'remove_ContentLoading',
+        ( ['in'], EventRegistrationToken, 'token' )),
+
+    COMMETHOD([], HRESULT, 'add_NavigationCompleted',
+        ( ['in'], POINTER(ICoreWebView2FrameNavigationCompletedEventHandler), 'eventHandler' ),
+        ( ['out'], POINTER(EventRegistrationToken), 'token' )),
+
+    COMMETHOD([], HRESULT, 'remove_NavigationCompleted',
+        ( ['in'], EventRegistrationToken, 'token' )),
+
+    COMMETHOD([], HRESULT, 'add_DOMContentLoaded',
+        ( ['in'], POINTER(ICoreWebView2FrameDOMContentLoadedEventHandler), 'eventHandler' ),
+        ( ['out'], POINTER(EventRegistrationToken), 'token' )),
+
+    COMMETHOD([], HRESULT, 'remove_DOMContentLoaded',
+        ( ['in'], EventRegistrationToken, 'token' )),
+
+    COMMETHOD([], HRESULT, 'ExecuteScript',
+        ( ['in'], LPCWSTR, 'javaScript' ),
+        ( ['in'], POINTER(ICoreWebView2ExecuteScriptCompletedHandler), 'handler' )),
+
+    COMMETHOD([], HRESULT, 'PostWebMessageAsJson',
+        ( ['in'], LPCWSTR, 'webMessageAsJson' )),
+
+    COMMETHOD([], HRESULT, 'PostWebMessageAsString',
+        ( ['in'], LPCWSTR, 'webMessageAsString' )),
+
+    COMMETHOD([], HRESULT, 'add_WebMessageReceived',
+        ( ['in'], POINTER(ICoreWebView2FrameWebMessageReceivedEventHandler), 'handler' ),
+        ( ['out'], POINTER(EventRegistrationToken), 'token' )),
+
+    COMMETHOD([], HRESULT, 'remove_WebMessageReceived',
+        ( ['in'], EventRegistrationToken, 'token' )),
+]
+
+# 3: 2
+# 4: 1
+# 5: 1
+# 6: 2
+
+ICoreWebView2Frame7._methods_ = [COMMETHOD([], HRESULT, '_')] * 6 + [
+    COMMETHOD([], HRESULT, 'add_FrameCreated',
+        ( ['in'], POINTER(ICoreWebView2FrameChildFrameCreatedEventHandler), 'eventHandler' ),
+        ( ['out'], POINTER(EventRegistrationToken), 'token' )),
+
+    COMMETHOD([], HRESULT, 'remove_FrameCreated',
+        ( ['in'], EventRegistrationToken, 'token' )),
+]
+
+ICoreWebView2FrameContentLoadingEventHandler._methods_ = [
+    COMMETHOD([], HRESULT, 'Invoke',
+        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+        ( ['in'], POINTER(ICoreWebView2ContentLoadingEventArgs), 'args' )),
+]
+
+ICoreWebView2FrameChildFrameCreatedEventHandler._methods_ = [
+    COMMETHOD([], HRESULT, 'Invoke',
+        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+        ( ['in'], POINTER(ICoreWebView2FrameCreatedEventArgs), 'args' )),
+]
+
+ICoreWebView2FrameCreatedEventArgs._methods_ = [
+    COMMETHOD([], HRESULT, 'get_Frame',
+        ( ['retval', 'out'], POINTER(POINTER(ICoreWebView2Frame)), 'value' )),
+]
+
+ICoreWebView2FrameCreatedEventHandler._methods_ = [
+    COMMETHOD([], HRESULT, 'Invoke',
+        ( ['in'], POINTER(ICoreWebView2), 'sender' ),
+        ( ['in'], POINTER(ICoreWebView2FrameCreatedEventArgs), 'args' )),
+]
+
+ICoreWebView2FrameDOMContentLoadedEventHandler._methods_ = [
+    COMMETHOD([], HRESULT, 'Invoke',
+        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+        ( ['in'], POINTER(ICoreWebView2DOMContentLoadedEventArgs), 'args' )),
+]
+
+ICoreWebView2FrameNameChangedEventHandler._methods_ = [
+    COMMETHOD([], HRESULT, 'Invoke',
+        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+        ( ['in'], POINTER(IUnknown), 'args' )),
+]
+
+ICoreWebView2FrameNavigationCompletedEventHandler._methods_ = [
+    COMMETHOD([], HRESULT, 'Invoke',
+        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+        ( ['in'], POINTER(ICoreWebView2NavigationCompletedEventArgs), 'args' )),
+]
+
+ICoreWebView2FrameNavigationStartingEventHandler._methods_ = [
+    COMMETHOD([], HRESULT, 'Invoke',
+        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+        ( ['in'], POINTER(ICoreWebView2NavigationStartingEventArgs), 'args' )),
+]
+
+ICoreWebView2FrameWebMessageReceivedEventHandler._methods_ = [
+    COMMETHOD([], HRESULT, 'Invoke',
+        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+        ( ['in'], POINTER(ICoreWebView2WebMessageReceivedEventArgs), 'args' )),
 ]

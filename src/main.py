@@ -205,8 +205,8 @@ class App(MainWin):
             IDM_FULLSCREEN_DBLCLK:      self.action_toggle_fullscreen_dblclk,
 
             # Help
-            IDM_UPDATE_APP:             self.action_update_app,
             IDM_ABOUT:                  self.action_about,
+            IDM_UPDATE_APP:             self.action_update_app,
 
             # Accelerators
             IDA_ESCAPE:                 self.action_escape_fullscreen,
@@ -247,12 +247,11 @@ class App(MainWin):
         if not self.show_status:
             user32.CheckMenuItem(self.h_menu, IDM_SHOW_STATUS, MF_BYCOMMAND | MF_UNCHECKED)
 
-        flag = MF_BYCOMMAND | MF_CHECKED
-
         user32.CheckMenuItem(self.h_menu, IDM_THEME_AUTO + self.theme, MF_BYCOMMAND | MF_CHECKED)
         idm = list(ENGINES.keys())[list(ENGINES.values()).index(self.engine)]
         user32.CheckMenuItem(self.h_menu, idm, MF_BYCOMMAND | MF_CHECKED)
 
+        flag = MF_BYCOMMAND | MF_CHECKED
         if self.show_playlist:
             user32.CheckMenuItem(self.h_menu, IDM_SHOW_PLAYLIST, flag)
         if self.stayontop:
@@ -493,6 +492,20 @@ class App(MainWin):
             flags = SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER
         )
 
+        self.static_logo.set_window_pos(
+            width = width, height = height,
+            #hwnd_insert_after = HWND_TOPMOST,
+            flags = SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER
+        )
+        user32.InvalidateRect(self.static_logo.hwnd, None, TRUE)
+
+#        print(width // 2 - 74, height // 2 - 74)
+#        self.static_logo.set_window_pos(
+#            x = width // 2 - 74, y = height // 2 - 74,
+#            #hwnd_insert_after = HWND_TOPMOST,
+#            flags = SWP_NOSIZE #| SWP_SHOWWINDOW#| SWP_NOACTIVATE | SWP_NOZORDER
+#        )
+
         user32.InvalidateRect(self.hwnd, byref(RECT(0, height, width, _height)), TRUE)
 
     ########################################
@@ -695,6 +708,18 @@ class App(MainWin):
                 _on_WM_LBUTTONDOWN(hwnd, wparam, lparam)
 
         self.video_container.register_message_callback(WM_LBUTTONDBLCLK, _on_WM_LBUTTONDBLCLK)
+
+        self.static_logo = Static(
+            self,
+            width = 148, height = 148,
+            style = WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE,
+            ex_style = WS_EX_TOPMOST,
+            bg_color = 0, bg_color_dark = 0
+        )
+        self.static_logo.send_message(STM_SETIMAGE, IMAGE_BITMAP,
+            user32.LoadImageW(HMOD_RESOURCES, MAKEINTRESOURCEW(IDB_LOGO), IMAGE_BITMAP, 0, 0, 0)
+        )
+        user32.InvalidateRect(self.static_logo.hwnd, None, TRUE)
 
     ########################################
     #
@@ -981,7 +1006,7 @@ class App(MainWin):
                             text_buf = create_unicode_buffer(text_len)
                             user32.SendMessageW(hwnd_edit, WM_GETTEXT, text_len, text_buf)
                             media_url = text_buf.value
-                            if not media_url.startswith('http'):
+                            if not ':' in media_url:
                                 media_url = f'https://{media_url}'
                             self.statusbar.set_text('Loading...', IDX_STATUSBAR_PART_STATE)
                             self.create_timer(lambda: self.load_media_file(media_url), 0, True)
@@ -1798,10 +1823,13 @@ class App(MainWin):
             ok = user32.RemoveMenu(self.h_menu_sub_tracks, 0, MF_BYPOSITION)
         user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_GRAYED)
 
+        self.static_logo.show(SW_SHOW)
+
     ########################################
     #
     ########################################
     def update_ui_has_media(self, has_video, has_duration, is_url):
+        self.static_logo.show(SW_HIDE)
         self.slider_seek.enable_window(has_duration)
         for idm in (IDM_PLAY_PAUSE, IDM_STOP):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, TRUE)

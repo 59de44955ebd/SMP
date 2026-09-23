@@ -48,7 +48,7 @@ class SETTINGS:
 
 # Order:
 # NavigationStarting
-# ContentLoading - not raised if a same page navigation occurs.
+# ContentLoading -> Earliest moment when JS can be injected. Not raised if a same page navigation occurs.
 # DOMContentLoaded
 # NavigationCompleted
 
@@ -62,9 +62,8 @@ class EVENT:
     DOWNLOAD_STARTING = 107
     FAVICON_CHANGED = 108
     FILES_DROPPED = 109
-    FOCUS_LOST = 124
-    FRAME_NAVIGATION_COMPLETED = 110
-    FRAME_NAVIGATION_STARTING = 111
+    FOCUS_LOST = 110
+    FRAME_CREATED = 111
     HISTORY_CHANGED = 112
     MENU_COMMAND = 113
     NAVIGATION_COMPLETED = 114
@@ -214,9 +213,7 @@ DEFAULT_HTML = """
         <meta name="color-scheme" content="dark">
         <title>about:blank</title>
     </head>
-    <body>
-    <video></video>
-    </body>
+    <body></body>
 </html>
 """
 
@@ -256,7 +253,7 @@ if (!window.chrome.webview.api){
     };
     window.chrome.webview.addEventListener('message', (msg) => {chrome.webview.api._results[msg.data[0]] = msg.data[1]});
     console.log('API_JS loaded');
-}
+};
 """
 
 DROP_INIT_JS = """
@@ -378,6 +375,186 @@ class Response:
 ########################################
 #
 ########################################
+class Frame:
+
+    ########################################
+    #
+    ########################################
+    def __init__(self, frame):
+        self._frame = frame
+        self._listeners = {}
+        self._handlers = {}  # evt => handler
+        self._tokens = {}  # evt => token
+        self._expose_callbacks = {}  # evt => [callbacks...]
+
+        frame.add_WebMessageReceived(
+            FrameWebMessageReceivedEventHandler(self._on_web_message_received).interface()
+        )
+
+    ########################################
+    #
+    ########################################
+    def connect(self, evt, func):
+        if evt not in self._listeners:
+            self._listeners[evt] = []
+        elif func in self._listeners[evt]:
+            return
+        init_event = not self._listeners[evt]
+        self._listeners[evt].append(func)
+        if init_event:
+            self._register_event(evt)
+
+    ########################################
+    #
+    ########################################
+    def disconnect(self, evt, func = None):
+        if evt not in self._listeners:
+            return
+        if func is None:
+            self._listeners[evt] = []
+        elif func in self._listeners[evt]:
+            self._listeners[evt].remove(func)
+        else:
+            return
+        if not self._listeners[evt]:
+            self._unregister_event(evt)
+
+    ########################################
+    #
+    ########################################
+    def emit(self, evt, *args):
+        if evt not in self._listeners:
+            return
+        res = None
+        # We use a copy, in case the callback alters the list by removing itself from it(single-shot)
+        listeners = list(self._listeners[evt])
+        for func in listeners:
+            r = func(self, *args)
+            res = res or r
+        return res
+
+    ########################################
+    #
+    ########################################
+    def expose(self, function_name, callback, timeout_ms = 0xFFFFFFFF, return_result = True):
+        self._expose_callbacks[function_name] = callback
+        js = f'chrome.webview.api._expose("{function_name}", [], {timeout_ms}, {int(return_result)});'
+        self._frame.ExecuteScript(js, None)
+
+    ########################################
+    #
+    ########################################
+    def execute_js(self, js, callback = None):
+        self._frame.ExecuteScript(
+            js,
+            ExecuteScriptCompletedHandler(callback).interface() if callback else None
+        )
+
+    ########################################
+    #
+    ########################################
+    def _register_event(self, evt):
+        if evt in self._handlers:
+            return
+
+        if evt == EVENT.CONTENT_LOADING:
+            self._handlers[evt] = FrameContentLoadingEventHandler(self._on_content_loading)
+            self._tokens[evt] = self._frame.add_NavigationCompleted(self._handlers[evt].interface())
+
+        elif evt == EVENT.DOM_CONTENT_LOADED:
+            self._handlers[EVENT.DOM_CONTENT_LOADED] = FrameDOMContentLoadedEventHandler(self._on_dom_content_loaded)
+            self._tokens[EVENT.DOM_CONTENT_LOADED] = self._frame.add_DOMContentLoaded(self._handlers[EVENT.DOM_CONTENT_LOADED].interface())
+
+        elif evt == EVENT.FRAME_CREATED:
+            self._handlers[evt] = FrameChildFrameCreatedEventHandler(self._on_frame_created)
+            self._tokens[evt] = self._frame.add_FrameCreated(self._handlers[evt].interface())
+
+        elif evt == EVENT.NAVIGATION_COMPLETED:
+            self._handlers[evt] = FrameNavigationCompletedHandler(self._on_navigation_completed)
+            self._tokens[evt] = self._frame.add_NavigationCompleted(self._handlers[evt].interface())
+
+        elif evt == EVENT.NAVIGATION_STARTING:
+            self._handlers[evt] = FrameNavigationStartingHandler(self._on_navigation_starting)
+            self._tokens[evt] = self._frame.add_NavigationStarting(self._handlers[evt].interface())
+
+        elif evt == EVENT.WEB_MESSAGE_RECEIVED:
+            self._handlers[evt] = FrameWebMessageReceivedEventHandler(self._on_web_message_received)
+            self._tokens[evt] = self._frame.add_WebMessageReceived(self._handlers[evt].interface())
+
+    ########################################
+    #
+    ########################################
+    def _unregister_event(self, evt):
+
+        if evt not in self._tokens:
+            return
+
+        if evt == EVENT.CONTENT_LOADING:
+            self._frame.remove_ContentLoading(self._tokens[evt])
+
+        elif evt == EVENT.DOM_CONTENT_LOADED:
+            self._frame.remove_DOMContentLoaded(self._tokens[evt])
+
+        elif evt == EVENT.FRAME_CREATED:
+            self._frame.remove_FrameCreated(self._tokens[evt])
+
+        elif evt == EVENT.NAVIGATION_COMPLETED:
+            self._frame.remove_NavigationCompleted(self._tokens[evt])
+
+        elif evt == EVENT.NAVIGATION_STARTING:
+            self._frame.remove_NavigationStarting(self._tokens[evt])
+
+        elif evt == EVENT.WEB_MESSAGE_RECEIVED:
+            self._frame.remove_WebMessageReceived(self._tokens[evt])
+
+        del self._tokens[evt]
+        del self._handlers[evt]
+
+    ########################################
+    # Earliest moment when JS can be injected
+    ########################################
+    def _on_content_loading(self, sender, args):
+        self.emit(EVENT.CONTENT_LOADING, args)
+
+    ########################################
+    #
+    ########################################
+    def _on_dom_content_loaded(self, sender, args):
+        self.emit(EVENT.DOM_CONTENT_LOADED)
+
+    ########################################
+    #
+    ########################################
+    def _on_navigation_completed(self, sender, args):
+        self.emit(EVENT.NAVIGATION_COMPLETED, args)
+
+    ########################################
+    #
+    ########################################
+    def _on_navigation_starting(self, sender, args):
+        self.emit(EVENT.NAVIGATION_STARTING, args)
+
+    ########################################
+    #
+    ########################################
+    def _on_frame_created(self, sender, args):
+        self.emit(EVENT.FRAME_CREATED, Frame(args.get_Frame().QueryInterface(ICoreWebView2Frame7)))
+
+    ########################################
+    #
+    ########################################
+    def _on_web_message_received(self, sender, args):
+        data = json.loads(args.get_WebMessageAsJson())
+        uid, func, args = data
+        if func in self._expose_callbacks:
+            res = self._expose_callbacks[func](*args)
+            if res is not None:
+                self._frame.PostWebMessageAsJson(json.dumps([id, res]))
+        self.emit(EVENT.WEB_MESSAGE_RECEIVED, data)
+
+########################################
+#
+########################################
 class WebView2:
 
     environment = None
@@ -414,7 +591,7 @@ class WebView2:
         self._init_rect = RECT(left, top, left + width, top + height)
         self._init_hidden = is_hidden
         self._init_suspended = False
-        self._init_js = ''
+        self._init_js = API_JS
         self._init_events = []
         self._init_vhosts = []
         self._init_focus = False
@@ -561,13 +738,9 @@ class WebView2:
             self._handlers[evt] = FocusChangedEventHandler(self._on_focus_lost)
             self._tokens[evt] = self._controller.add_LostFocus(self._handlers[evt].interface())
 
-        elif evt == EVENT.FRAME_NAVIGATION_COMPLETED:
-            self._handlers[evt] = FrameNavigationCompletedHandler(self._on_frame_navigation_completed)
-            self._tokens[evt] = self._webview.add_FrameNavigationCompleted(self._handlers[evt].interface())
-
-        elif evt == EVENT.FRAME_NAVIGATION_STARTING:
-            self._handlers[evt] = FrameNavigationStartingHandler(self._on_frame_navigation_starting)
-            self._tokens[evt] = self._webview.add_FrameNavigationStarting(self._handlers[evt].interface())
+        elif evt == EVENT.FRAME_CREATED:
+            self._handlers[evt] = FrameCreatedEventHandler(self._on_frame_created)
+            self._tokens[evt] = self._webview.add_FrameCreated(self._handlers[evt].interface())
 
         elif evt == EVENT.HISTORY_CHANGED:
             self._handlers[evt] = HistoryChangedEventHandler(self._on_history_changed)
@@ -645,11 +818,8 @@ class WebView2:
         elif evt == EVENT.FOCUS_LOST:
             self._controller.remove_LostFocus(self._tokens[evt])
 
-        elif evt == EVENT.FRAME_NAVIGATION_COMPLETED:
-            self._webview.remove_FrameNavigationCompleted(self._tokens[evt])
-
-        elif evt == EVENT.FRAME_NAVIGATION_STARTING:
-            self._webview.remove_FrameNavigationStarting(self._tokens[evt])
+        elif evt == EVENT.FRAME_CREATED:
+            self._webview.remove_FrameCreated(self._tokens[evt])
 
         elif evt == EVENT.HISTORY_CHANGED:
             self._webview.remove_HistoryChanged(self._tokens[evt])
@@ -872,14 +1042,20 @@ class WebView2:
     ########################################
     #
     ########################################
-    def _on_frame_navigation_completed(self, sender, args):
-        self.emit(EVENT.FRAME_NAVIGATION_COMPLETED, args)
+    def _on_frame_created(self, sender, args):
+        self.emit(EVENT.FRAME_CREATED, Frame(args.get_Frame().QueryInterface(ICoreWebView2Frame7)))
 
     ########################################
     #
     ########################################
-    def _on_frame_navigation_starting(self, sender, args):
-        self.emit(EVENT.FRAME_NAVIGATION_STARTING, args)
+#    def _on_frame_navigation_completed(self, sender, args):
+#        self.emit(EVENT.FRAME_NAVIGATION_COMPLETED, args)
+
+    ########################################
+    #
+    ########################################
+#    def _on_frame_navigation_starting(self, sender, args):
+#        self.emit(EVENT.FRAME_NAVIGATION_STARTING, args)
 
     ########################################
     #
@@ -1066,7 +1242,7 @@ class WebView2:
     ########################################
     def expose(self, function_name, callback, timeout_ms = 0xFFFFFFFF, return_result = True):
         self._expose_callbacks[function_name] = callback
-        js = API_JS + f'chrome.webview.api._expose("{function_name}", [], {timeout_ms}, {int(return_result)});'
+        js = f'chrome.webview.api._expose("{function_name}", [], {timeout_ms}, {int(return_result)});'
         if self._webview:
             self._webview.ExecuteScript(js, None)
         else:

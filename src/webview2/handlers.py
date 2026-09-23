@@ -8,15 +8,10 @@ from .interfaces import *
 class _Handler(object):
 
     def __init__(self, callback):
-#        COMObject.__init__(self)
         self.callback = callback
 
     def __del__(self):
         self.IUnknown_Release(self)
-
-#    def Release(self):
-#        print('Release')
-#        self.IUnknown_Release(self)
 
     def Invoke(self, this, sender, args = None):
         try:
@@ -28,6 +23,7 @@ class _Handler(object):
         obj = cast(self._com_pointers_[self._com_interfaces_[0]._iid_], POINTER(self._com_interfaces_[0]))
         obj.AddRef()
         return obj
+
 
 ########################################
 #    COMMETHOD([], HRESULT, 'Invoke',
@@ -202,19 +198,59 @@ class FocusChangedEventHandler(COMObject, _Handler):
 
 ########################################
 #    COMMETHOD([], HRESULT, 'Invoke',
-#        ( ['in'], POINTER(ICoreWebView2), 'sender' ),
-#        ( ['in'], POINTER(ICoreWebView2NavigationStartingEventArgs), 'args' ))
+#        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+#        ( ['in'], POINTER(ICoreWebView2FrameCreatedEventArgs), 'args' )),
 ########################################
-class FrameNavigationStartingHandler(COMObject, _Handler):
-    _com_interfaces_ = [ICoreWebView2NavigationStartingEventHandler]
+class FrameChildFrameCreatedEventHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2FrameChildFrameCreatedEventHandler]
+
+########################################
+#    COMMETHOD([], HRESULT, 'Invoke',
+#        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+#        ( ['in'], POINTER(ICoreWebView2ContentLoadingEventArgs), 'args' )),
+########################################
+class FrameContentLoadingEventHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2FrameContentLoadingEventHandler]
 
 ########################################
 #    COMMETHOD([], HRESULT, 'Invoke',
 #        ( ['in'], POINTER(ICoreWebView2), 'sender' ),
-#        ( ['in'], POINTER(ICoreWebView2NavigationCompletedEventArgs), 'args' ))
+#        ( ['in'], POINTER(ICoreWebView2FrameCreatedEventArgs), 'args' )),
+########################################
+class FrameCreatedEventHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2FrameCreatedEventHandler]
+
+########################################
+#    COMMETHOD([], HRESULT, 'Invoke',
+#        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+#        ( ['in'], POINTER(ICoreWebView2DOMContentLoadedEventArgs), 'args' )),
+########################################
+class FrameDOMContentLoadedEventHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2FrameDOMContentLoadedEventHandler]
+
+########################################
+#    COMMETHOD([], HRESULT, 'Invoke',
+#        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+#        ( ['in'], POINTER(ICoreWebView2NavigationCompletedEventArgs), 'args' )),
 ########################################
 class FrameNavigationCompletedHandler(COMObject, _Handler):
-    _com_interfaces_ = [ICoreWebView2NavigationCompletedEventHandler]
+    _com_interfaces_ = [ICoreWebView2FrameNavigationCompletedEventHandler]
+
+########################################
+#    COMMETHOD([], HRESULT, 'Invoke',
+#        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+#        ( ['in'], POINTER(ICoreWebView2NavigationStartingEventArgs), 'args' )),
+########################################
+class FrameNavigationStartingHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2FrameNavigationStartingEventHandler]
+
+########################################
+#    COMMETHOD([], HRESULT, 'Invoke',
+#        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+#        ( ['in'], POINTER(ICoreWebView2WebMessageReceivedEventArgs), 'args' )),
+########################################
+class FrameWebMessageReceivedEventHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2FrameWebMessageReceivedEventHandler]
 
 ########################################
 #

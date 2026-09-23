@@ -21,6 +21,7 @@
 #define IDB_VOLUME_MUTE_DARK 106
 #define IDB_CLOSE_BUTTON 107
 #define IDB_CLOSE_BUTTON_DARK 108
+#define IDB_LOGO 110
 
 // Main menu
 
@@ -109,6 +110,7 @@
 // Help
 #define IDM_ABOUT 800
 #define IDM_UPDATE_APP 801
+//#define IDM_DOWNLOAD_GM 802
 
 // Accels
 #define IDA_ESCAPE 900

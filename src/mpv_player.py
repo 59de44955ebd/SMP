@@ -13,6 +13,17 @@ import mpv
 def init(dll_path):
     mpv.init(dll_path)
 
+# mpv doesn't support MIDI. We use an additional DirectShow player
+# that doesn't depend on external filters (the "engine_directshow" directory)
+# to implement basic MIDI playback without SoundFont support.
+# But in case "engine_directshow" exists, we do use it to play MIDI
+# via SoundFont.
+DIRECTSHOW_PATH = os.path.join(APP_DIR, 'engine_directshow')
+USE_BASS_MIDI = (
+    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'BassAudioSource.ax')) and
+    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'bass.dll')) and
+    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'bassmidi.dll'))
+)
 
 ########################################
 #
@@ -34,38 +45,23 @@ class Player():
         self._volume = volume
         self._filename = None
 
-        # mpv doesn't support MIDI. We use an additional DirectShow player
-        # that doesn't depend on external filters (the "engine_directshow" directory)
-        # to implement basic MIDI playback without soundfont support.
         self._midi_player = None
+
+        self.hwnd = None
 
         self._player = mpv.MPV()
         self._player.wid = window.hwnd
         self._player.volume = int(volume * 100)
         self._player.keep_open = 'yes'  # causes END_FILE never triggered
 
-        ########################################
-        #
-        ########################################
-        def _on_event(event):
-            print('>>>', event)
-
-            eid = event.event_id.value
-#            if eid == mpv.MpvEventID.END_FILE:
-#                print('END')
-#                self.pause()
-#                self.set_time(0)
-
-            if eid == mpv.MpvEventID.SEEK:
-                print(self._player.time_pos)
-
-#        self._player.register_event_callback(_on_event)
-
     ########################################
     #
     ########################################
     def close_file(self):
         if self._filename:
+            if self.hwnd:
+                user32.ShowWindow(self.hwnd, SW_HIDE)
+
             if self._is_midi:
                 self._midi_player.close_file()
             else:
@@ -87,9 +83,9 @@ class Player():
             self._is_midi = True
             if self._midi_player is None:
                 import dshow_player
-                dshow_player.USE_LOCAL_FILTERS = False
-                dshow_player.USE_BASS_MIDI = False
-                dshow_player.USE_MASTER_VOLUME = True
+                dshow_player.USE_BASS_MIDI = USE_BASS_MIDI
+                if USE_BASS_MIDI:
+                    dshow_player.init(DIRECTSHOW_PATH)
                 self._midi_player = dshow_player.Player(self._window, volume = self._volume, auto_resize = False)
                 self._filename = media_file
             else:
@@ -102,7 +98,6 @@ class Player():
         #
         ########################################
         def _on_metadata(property_name, data):
-#            print(data)  # {'major_brand': 'mp42', 'minor_version': '1', 'compatible_brands': 'mp42avc1', 'creation_time': '2010-02-09T01:55:39.000000Z'}
             if data is not None:
                 # mpv does something nasty when a new video window is injected into
                 # the container, (forced) dark menus are reset to light mode.
@@ -121,6 +116,14 @@ class Player():
                 on_parsed(True)
 
         self._player.observe_property('metadata', _on_metadata)
+
+        ########################################
+        #
+        ########################################
+        def _on_window(property_name, data):
+            self.hwnd = data
+
+        self._player.observe_property('window-id', _on_window)
 
         return True
 
