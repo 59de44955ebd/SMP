@@ -1690,6 +1690,7 @@ class App(MainWin):
             if callback:
                 callback(ok)
             if not ok:
+                self.statusbar.set_text('Failed', IDX_STATUSBAR_PART_STATE)
                 return
             self.media_file = filename
             txt = f'{caption if caption else os.path.basename(filename)}'

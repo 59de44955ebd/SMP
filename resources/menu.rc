@@ -98,11 +98,11 @@ BEGIN
       MENUITEM "&webview",IDM_ENGINE_WEBVIEW
     END
     MENUITEM SEPARATOR
-    MENUITEM "Stay on &Top\tT",IDM_STAY_ON_TOP
+    MENUITEM "&Stay on Top\tT",IDM_STAY_ON_TOP
     MENUITEM "Minimize to &Tray",IDM_MINIMIZE_TO_TRAY
-    MENUITEM "&Auto-Resize Window to Video",IDM_AUTO_RESIZE_TO_VIDEO
-    MENUITEM "&Single Instance",IDM_SINGLE_INSTANCE
-    MENUITEM "&Remember last Playlist",IDM_REMEMBER_PLAYLIST
+    MENUITEM "&Resize Interface to Video Size",IDM_AUTO_RESIZE_TO_VIDEO
+    MENUITEM "Single &Instance",IDM_SINGLE_INSTANCE
+    MENUITEM "Remember &last Playlist",IDM_REMEMBER_PLAYLIST
     MENUITEM "Show &Media Title in Title Bar",IDM_USE_META_TITLE
     MENUITEM "&Fullscreen by Double Click",IDM_FULLSCREEN_DBLCLK
   END
