@@ -231,6 +231,14 @@ class FrameDOMContentLoadedEventHandler(COMObject, _Handler):
 ########################################
 #    COMMETHOD([], HRESULT, 'Invoke',
 #        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
+#        ( ['in'], POINTER(IUnknown), 'args' )),
+########################################
+class FrameNameChangedEventHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2FrameNameChangedEventHandler]
+
+########################################
+#    COMMETHOD([], HRESULT, 'Invoke',
+#        ( ['in'], POINTER(ICoreWebView2Frame), 'sender' ),
 #        ( ['in'], POINTER(ICoreWebView2NavigationCompletedEventArgs), 'args' )),
 ########################################
 class FrameNavigationCompletedHandler(COMObject, _Handler):
@@ -393,3 +401,19 @@ class WebResourceRequestedEventHandler(COMObject, _Handler):
 ########################################
 class WebResourceResponseReceivedEventHandler(COMObject, _Handler):
     _com_interfaces_ = [ICoreWebView2WebResourceResponseReceivedEventHandler]
+
+########################################
+#    COMMETHOD([], HRESULT, 'Invoke',
+#        ( ['in'], HRESULT, 'errorCode' ),
+#        ( ['in'], POINTER(IStream), 'result' )),
+########################################
+class WebResourceResponseViewGetContentCompletedHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2WebResourceResponseViewGetContentCompletedHandler]
+
+########################################
+#    COMMETHOD([], HRESULT, 'Invoke',
+#        ( ['in'], POINTER(ICoreWebView2), 'sender' ),
+#        ( ['in'], POINTER(ICoreWebView2DevToolsProtocolEventReceivedEventArgs), 'args' )),
+########################################
+class DevToolsProtocolEventReceivedEventHandler(COMObject, _Handler):
+    _com_interfaces_ = [ICoreWebView2DevToolsProtocolEventReceivedEventHandler]

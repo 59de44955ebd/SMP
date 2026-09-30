@@ -8,6 +8,7 @@ from winapp.comtypes import *
 from winapp.comtypes.automation import VARIANT, IDispatch
 from winapp.comtypes.persist import IPropertyBag, IErrorLog
 from winapp.comtypes.hresult import *
+from winapp.comtypes.istream import *
 
 from winapp.const import WS_CHILD, WS_CLIPSIBLINGS, WS_CLIPCHILDREN
 from winapp.dlls import user32
@@ -1403,4 +1404,18 @@ class IBassSource2(IUnknown):
 IBassSource2._methods_ = [
     COMMETHOD([], HRESULT, 'SetSoundfont',
               ( ['in'], LPCWSTR, 'pSFont' )),
+]
+
+class IURLSourceFilterLAV(IUnknown):
+    _case_insensitive_ = True
+    _iid_ = GUID('{C8FF17F9-5365-4F32-8AD5-6C550342C2F7}')
+    _idlflags_ = []
+
+IURLSourceFilterLAV._methods_ = [
+    # Load a URL with the specified user agent and referrer
+    # UserAgent and Referrer are optional, and either, both or none can be specified
+    COMMETHOD([], HRESULT, 'LoadURL',
+              ( ['in'], LPCOLESTR, 'pszURL' ),
+              ( ['in'], LPCOLESTR, 'pszUserAgent' ),
+              ( ['in'], LPCOLESTR, 'pszReferrer' )),
 ]

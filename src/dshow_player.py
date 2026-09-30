@@ -12,6 +12,8 @@ USE_MASTER_VOLUME = False
 USE_BASS_MIDI = True
 USE_MPC_RENDERER = True  # If False, use VMR9 (Windowed) instead
 
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0'
+
 WM_EVENT_NOTIFY = WM_APP + 1
 
 if not USE_MASTER_VOLUME:
@@ -324,6 +326,12 @@ class Player():
             lav_splitter_source_src.Load(src_file, None)
         except:
             return False
+
+#        lav_splitter_source_src = lav_splitter_source.QueryInterface(IURLSourceFilterLAV)
+##        try:
+#        lav_splitter_source_src.LoadURL(src_file, USER_AGENT, None)  #pszReferrer
+#        except:
+#            return False
 
         # Default to 100 ms
         self._frame_step = 1000000

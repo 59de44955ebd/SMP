@@ -108,7 +108,8 @@ class Player(WebView2):
             ########################################
             def _on_initialized():
                 self._initialized = True
-                user32.SetWindowLongA(self.hwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE | WS_DISABLED)
+                hwnd = user32.FindWindowExW(self._parent_hwnd, None, 'Chrome_WidgetWin_0', None)
+                user32.SetWindowLongA(hwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE | WS_DISABLED)
                 self.execute_js(f'player.set_volume({self._volume});')
 
                 for k, v in self._image_values.items():

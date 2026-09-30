@@ -4,14 +4,11 @@ import sys
 from sysconfig import get_platform
 import time
 
-from winapp.themes import *
-from winapp.const import *
-from winapp.dlls import *
+TRUE = 1
+FALSE = 0
+
 from .interfaces import *
 from .handlers import *
-
-#shlwapi = windll.Shlwapi
-#shlwapi.SHCreateStreamOnFileW.argtypes = (LPCWSTR, DWORD, POINTER(POINTER(IStream)))
 
 if getattr(sys, 'frozen', False):
     loader_dll = os.path.join(os.path.dirname(__file__), 'loader.dll')
@@ -202,6 +199,14 @@ class WEB_RESOURCE_CONTEXT:
     CSP_VIOLATION_REPORT = 15
     OTHER = 16
 
+# COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS
+class WEB_RESOURCE_REQUEST_SOURCE_KINDS:
+    NONE = 0
+    DOCUMENT = 0x1
+    SHARED_WORKER = 0x2
+    SERVICE_WORKER = 0x4
+    ALL = 0xffffffff
+
 class WebviewNotReadyException(Exception):
     pass
 
@@ -294,82 +299,6 @@ if (document && document.readyState === "complete")
 else
     window.addEventListener("DOMContentLoaded", () => _exit_drop_());
 """
-
-########################################
-# res = call_sync(self._active_webview.get_cookies)
-########################################
-def call_sync(func, **kwargs):
-    h_event = kernel32.CreateEventW(0, TRUE, FALSE, None)
-
-    class ctx():
-        result = None
-
-    def callback(*result, h_event=h_event):
-        ctx.result = result
-        kernel32.SetEvent(h_event)
-
-    try:
-        func(callback=callback, **kwargs)
-    except Exception as e:
-        print(e)
-        kernel32.CloseHandle(h_event)
-        return (-1, e)
-
-    hr = ole32.CoWaitForMultipleHandles(
-        COWAIT_DISPATCH_WINDOW_MESSAGES | COWAIT_DISPATCH_CALLS | COWAIT_INPUTAVAILABLE,
-        0xFFFFFFFF,
-        1,
-        (HANDLE * 1)(h_event),
-        byref(DWORD())
-    )
-    kernel32.CloseHandle(h_event)
-    return ctx.result
-
-
-########################################
-# https://treyhunner.com/2019/04/why-you-shouldnt-inherit-from-list-and-dict-in-python/
-# But we only need to support __setitem__ and __delitem__, nothing else.
-########################################
-class Headers(dict):
-
-    def __init__(self, d={}):
-        super().__init__(**d)
-        self._edited = []
-        self._deleted = []
-
-    def __setitem__(self, key, value):
-        self._edited.append(key)
-        super().__setitem__(key, value)
-
-    def __delitem__(self, key):
-        self._deleted.append(key)
-        super().__delitem__(key)
-
-
-########################################
-#
-########################################
-class Request:
-    def __init__(self, url, method, headers):
-        self.url = url
-        self.method = method
-        self.headers = headers
-
-    def __str__(self) -> str:
-        return str(self.__dict__)
-
-    def __repr__(self) -> str:
-        return str(self.__dict__)
-
-
-########################################
-#
-########################################
-class Response:
-    def __init__(self, url, status, headers):
-        self.url = url
-        self.status = status
-        self.headers = headers
 
 
 ########################################
@@ -481,6 +410,10 @@ class Frame:
             self._handlers[evt] = FrameWebMessageReceivedEventHandler(self._on_web_message_received)
             self._tokens[evt] = self._frame.add_WebMessageReceived(self._handlers[evt].interface())
 
+        elif evt == EVENT.DOCUMENT_TITLE_CHANGED:
+            self._handlers[evt] = FrameNameChangedEventHandler(self._on_document_title_changed)
+            self._tokens[evt] = self._frame.add_NameChanged(self._handlers[evt].interface())
+
     ########################################
     #
     ########################################
@@ -507,6 +440,9 @@ class Frame:
         elif evt == EVENT.WEB_MESSAGE_RECEIVED:
             self._frame.remove_WebMessageReceived(self._tokens[evt])
 
+        elif evt == EVENT.DOCUMENT_TITLE_CHANGED:
+            self._frame.remove_NameChanged(self._tokens[evt])
+
         del self._tokens[evt]
         del self._handlers[evt]
 
@@ -515,6 +451,12 @@ class Frame:
     ########################################
     def _on_content_loading(self, sender, args):
         self.emit(EVENT.CONTENT_LOADING, args)
+
+    ########################################
+    #
+    ########################################
+    def _on_document_title_changed(self, sender, args):
+        self.emit(EVENT.DOCUMENT_TITLE_CHANGED)
 
     ########################################
     #
@@ -551,6 +493,7 @@ class Frame:
             if res is not None:
                 self._frame.PostWebMessageAsJson(json.dumps([id, res]))
         self.emit(EVENT.WEB_MESSAGE_RECEIVED, data)
+
 
 ########################################
 #
@@ -596,8 +539,6 @@ class WebView2:
         self._init_vhosts = []
         self._init_focus = False
         self._init_muted = False
-
-        self._current_request_filter = ('*', WEB_RESOURCE_CONTEXT.ALL)
 
         if WebView2.environment is None:
             LOADER.CreateEnvironmentWithOptions(
@@ -775,7 +716,6 @@ class WebView2:
             self._tokens[evt] = self._webview.add_WebMessageReceived(self._handlers[evt].interface())
 
         elif evt == EVENT.WEB_RESOURCE_REQUESTED:
-            self._webview.AddWebResourceRequestedFilter(*self._current_request_filter)
             self._handlers[evt] = WebResourceRequestedEventHandler(self._on_web_resource_requested)
             self._tokens[evt] = self._webview.add_WebResourceRequested(self._handlers[evt].interface())
 
@@ -879,15 +819,8 @@ class WebView2:
     def _on_webview_ready(self, sender, args):
         self._controller = args
 
-        webview = self._controller.get_CoreWebView2().QueryInterface(ICoreWebView2_28)  # ICoreWebView2_25
+        webview = self._controller.get_CoreWebView2().QueryInterface(ICoreWebView2_28)
         self._webview = webview
-
-        if not WebView2.profile_initialized and SETTINGS.COLOR_SCHEME is not None:
-            webview_profile = self._webview.get_Profile().QueryInterface(ICoreWebView2Profile7)
-            webview_profile.put_PreferredColorScheme(SETTINGS.COLOR_SCHEME)
-            WebView2.profile_initialized = True
-
-        self.hwnd = user32.FindWindowExW(self._parent_hwnd, None, 'Chrome_WidgetWin_0', None)
 
         if self._init_hidden:
             self._controller.put_IsVisible(0)
@@ -1048,18 +981,6 @@ class WebView2:
     ########################################
     #
     ########################################
-#    def _on_frame_navigation_completed(self, sender, args):
-#        self.emit(EVENT.FRAME_NAVIGATION_COMPLETED, args)
-
-    ########################################
-    #
-    ########################################
-#    def _on_frame_navigation_starting(self, sender, args):
-#        self.emit(EVENT.FRAME_NAVIGATION_STARTING, args)
-
-    ########################################
-    #
-    ########################################
     def _on_history_changed(self,  sender, args):
         self.emit(EVENT.HISTORY_CHANGED)
 
@@ -1100,55 +1021,32 @@ class WebView2:
         self.emit(EVENT.STATUS_BAR_TEXT_CHANGED)
 
     ########################################
-    #
+    # args: ICoreWebView2WebResourceRequestedEventArgs
     ########################################
     def _on_web_resource_requested(self, sender, args):
-        request = args.get_Request()
-        headers = request.get_Headers()
+        self.emit(EVENT.WEB_RESOURCE_REQUESTED, args.get_Request())
 
-        headers_dict = Headers()
-        it = headers.GetIterator()
-        while it.get_HasCurrentHeader():
-            k, v = it.GetCurrentHeader()
-            headers_dict[k] = v
-            it.MoveNext()
+    ########################################
+    # args: ICoreWebView2WebResourceResponseReceivedEventArgs
+    ########################################
+    def _on_web_resource_response_received(self, sender, args):
+        self.emit(EVENT.WEB_RESOURCE_RESPONSE_RECEIVED, args.get_Response())
 
-        url = request.get_Uri()
-        method = request.get_Method()
-
-        request_obj = Request(url, method, Headers(headers_dict))
-
-        self.emit(EVENT.WEB_RESOURCE_REQUESTED, request_obj)
-
-        if request_obj.url != url:
-            request.put_Uri(request_obj.url)
-
-        if request_obj.method != method:
-            request.put_Method(request_obj.method)
-
-        for k in request_obj.headers._edited:
-            headers.SetHeader(k, request_obj.headers[k])
-
-        for k in request_obj.headers._deleted:
-            headers.RemoveHeader(k)
+    ########################################
+    # https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2_22?view=webview2-1.0.3967.48#addwebresourcerequestedfilterwithrequestsourcekinds
+    ########################################
+    def add_web_resource_requested_filter_with_request_source_kinds(self, uri: str, context: int, kinds: int):
+        if self._webview is None:
+            raise WebviewNotReadyException()
+        self._webview.AddWebResourceRequestedFilterWithRequestSourceKinds(uri, context, kinds)
 
     ########################################
     #
     ########################################
-    def _on_web_resource_response_received(self, sender, args):
-        response_view = args.get_Response()
-        headers = {}
-        it = response_view.get_Headers().GetIterator()
-        while it.get_HasCurrentHeader():
-            k, v = it.GetCurrentHeader()
-            headers[k] = v
-            it.MoveNext()
-
-        self.emit(EVENT.WEB_RESOURCE_RESPONSE_RECEIVED, Response(
-            args.get_Request().get_Uri(),
-            response_view.get_StatusCode(),
-            headers
-        ))
+    def remove_web_resource_requested_filter_with_request_source_kinds(self, uri: str, context: int, kinds: int):
+        if self._webview is None:
+            raise WebviewNotReadyException()
+        self._webview.RemoveWebResourceRequestedFilterWithRequestSourceKinds(uri, context, kinds)
 
     ########################################
     #
@@ -1613,26 +1511,13 @@ class WebView2:
     ########################################
     def set_visible(self, is_visible, suspend = False):
         if self._controller:
-
             self._controller.put_IsVisible(int(is_visible))
-
             if not is_visible and suspend:
                 self._webview.TrySuspend(None)
-
         else:
             self._init_hidden = not is_visible
             if not is_visible and suspend:
                 self._init_suspended = True
-
-    ########################################
-    #
-    ########################################
-    def set_web_resource_requested_filter(self, uri: str, context: int) -> None:
-        if EVENT.WEB_RESOURCE_REQUESTED in self._tokens:
-            self._webview.RemoveWebResourceRequestedFilter(*self._current_request_filter)
-        self._current_request_filter = (uri, context)
-        if EVENT.WEB_RESOURCE_REQUESTED in self._tokens:
-            self._webview.AddWebResourceRequestedFilter(*self._current_request_filter)
 
     ########################################
     #
@@ -1665,7 +1550,6 @@ class WebView2:
     def show_save_as_ui(self, callback = None):
         if self._webview is None:
             raise WebviewNotReadyException()
-
         self._webview.ShowSaveAsUI(
             ShowSaveAsUICompletedHandler(callback).interface() if callback else None
         )
