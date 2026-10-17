@@ -4,6 +4,38 @@ from ctypes.wintypes import *
 from .const import *
 from .types import *
 
+class BITMAPINFOHEADER(Structure):
+    def __init__(self, *args, **kwargs):
+        super(BITMAPINFOHEADER, self).__init__(*args, **kwargs)
+        self.biSize = sizeof(BITMAPINFOHEADER)
+    _fields_ = [
+            ('biSize', DWORD),
+            ('biWidth', LONG),
+            ('biHeight', LONG),
+            ('biPlanes', WORD),
+            ('biBitCount', WORD),
+            ('biCompression', DWORD),
+            ('biSizeImage', DWORD),
+            ('biXPelsPerMeter', LONG),
+            ('biYPelsPerMeter', LONG),
+            ('biClrUsed', DWORD),
+            ('biClrImportant', DWORD)
+    ]
+
+# Custom struct for writing BMP files
+class BMPHEADER(Structure):
+    _pack_ = 2
+    _fields_ = [
+        ('magic', SHORT),
+        ('size', DWORD),
+        ('reserved', DWORD),
+        ('offset', DWORD),
+    ]
+    def __init__(self, *args, **kwargs):
+        super(BMPHEADER, self).__init__(*args, **kwargs)
+        self.magic = 0x4D42  # BM
+        self.offset = sizeof(self) + sizeof(BITMAPINFOHEADER)
+
 class COLORSCHEME(Structure):
     def __init__(self, *args, **kwargs):
         super(COLORSCHEME, self).__init__(*args, **kwargs)

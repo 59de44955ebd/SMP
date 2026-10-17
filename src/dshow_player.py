@@ -12,8 +12,6 @@ USE_MASTER_VOLUME = False
 USE_BASS_MIDI = True
 USE_MPC_RENDERER = True  # If False, use VMR9 (Windowed) instead
 
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0'
-
 WM_EVENT_NOTIFY = WM_APP + 1
 
 if not USE_MASTER_VOLUME:
@@ -21,21 +19,11 @@ if not USE_MASTER_VOLUME:
 
 winmm = windll.Winmm
 
-def SUCCEEDED(hr):
-    return hr >= 0
-
-def LOWORD(l):
-    return WORD(l & 0xFFFF).value
-
-def HIWORD(l):
-    return WORD((l >> 16) & 0xFFFF).value
-
-def DXVA2FloatToFixed(_float_):
+def _DXVA2FloatToFixed(_float_):
     v = int(_float_ * 0x10000)
-    return DXVA2_Fixed32(LOWORD(v), HIWORD(v))
+    return DXVA2_Fixed32(WORD(v & 0xFFFF).value, WORD((v >> 16) & 0xFFFF).value)
 
-
-FILTER_DIR = None  #os.path.join(os.path.dirname(__file__), 'filters')
+FILTER_DIR = None
 
 def init(filter_dir):
     global FILTER_DIR
@@ -52,15 +40,14 @@ class Player():
     ########################################
     def __init__(
         self,
-        parent_window,
-        volume = .75,
-
-        width = 0, height = 0,
-        auto_resize = True
+        window: object,
+        volume: float = .75,
     ):
-        self._parent_window = parent_window
-        self._width = width
-        self._height = height
+        self._window = window
+
+        self._width = 0
+        self._height = 0
+
         self._loop = False
 
         self._use_ratio = True
@@ -129,17 +116,16 @@ class Player():
     #            elif evt == EC_VIDEO_SIZE_CHANGED:
     #                print('EC_VIDEO_SIZE_CHANGED', self.get_size())
 
-        parent_window.register_message_callback(WM_EVENT_NOTIFY, _on_WM_EVENT_NOTIFY)
+        window.register_message_callback(WM_EVENT_NOTIFY, _on_WM_EVENT_NOTIFY)
 
-        if auto_resize:
-            ########################################
-            #
-            ########################################
-            def _on_WM_SIZE(hwnd, wparam, lparam):
-                width, height = lparam & 0xFFFF, (lparam >> 16) & 0xFFFF
-                self._resize(width, height)
+        ########################################
+        #
+        ########################################
+        def _on_WM_SIZE(hwnd, wparam, lparam):
+            width, height = lparam & 0xFFFF, (lparam >> 16) & 0xFFFF
+            self._resize(width, height)
 
-            parent_window.register_message_callback(WM_SIZE, _on_WM_SIZE)
+        window.register_message_callback(WM_SIZE, _on_WM_SIZE)
 
     ########################################
     #
@@ -178,7 +164,7 @@ class Player():
     def _query_interfaces(self):
         self._media_control = self._filter_graph.QueryInterface(IMediaControl)
         self._media_event = self._filter_graph.QueryInterface(IMediaEventEx)
-        self._media_event.SetNotifyWindow(self._parent_window.hwnd, WM_EVENT_NOTIFY, 0)
+        self._media_event.SetNotifyWindow(self._window.hwnd, WM_EVENT_NOTIFY, 0)
         self._media_seeking = self._filter_graph.QueryInterface(IMediaSeeking)
 
         if self._has_video:
@@ -192,7 +178,6 @@ class Player():
     #
     ########################################
     def _reset(self):
-
         self._basic_audio = None
         self._basic_video = None
         self._direct_vob_sub = None
@@ -326,12 +311,6 @@ class Player():
             lav_splitter_source_src.Load(src_file, None)
         except:
             return False
-
-#        lav_splitter_source_src = lav_splitter_source.QueryInterface(IURLSourceFilterLAV)
-##        try:
-#        lav_splitter_source_src.LoadURL(src_file, USER_AGENT, None)  #pszReferrer
-#        except:
-#            return False
 
         # Default to 100 ms
         self._frame_step = 1000000
@@ -540,10 +519,10 @@ class Player():
             self._query_interfaces()
 
             if self._has_video:
-                self._video_window.Owner = self._parent_window.hwnd
+                self._video_window.Owner = self._window.hwnd
                 if not USE_MPC_RENDERER:
                     self._video_window.WindowStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS
-                self._video_window.MessageDrain = self._parent_window.hwnd
+                self._video_window.MessageDrain = self._window.hwnd
 
                 if USE_MPC_RENDERER:
                     w, h = self._basic_video.GetPreferredAspectRatio()
@@ -654,13 +633,13 @@ class Player():
     ########################################
     #
     ########################################
-    def skip_back(self, secs):
+    def skip_back(self, secs: float):
         self.set_time(max(0, self.get_time() - secs))
 
     ########################################
     #
     ########################################
-    def skip_forward(self, secs):
+    def skip_forward(self, secs: float):
         t = self.get_time() + secs
         if self._duration:
             t = min(self._duration / 10000000.0, t)
@@ -669,7 +648,7 @@ class Player():
     ########################################
     #
     ########################################
-    def step_back(self, frames = 1):
+    def step_back(self, frames: int = 1):
         if self._media_seeking is None or self._frame_step == 0:
             return
         t = max(0, self._media_seeking.GetCurrentPosition() - frames * self._frame_step)
@@ -681,7 +660,7 @@ class Player():
     ########################################
     #
     ########################################
-    def step_forward(self, frames = 1):
+    def step_forward(self, frames: int = 1):
         if self._media_seeking is None or self._frame_step == 0:
             return
         t = self._media_seeking.GetCurrentPosition() + int(frames * self._frame_step)
@@ -745,15 +724,15 @@ class Player():
         if USE_MPC_RENDERER:
             if flag:
                 self._rc_parent = RECT()
-                user32.GetClientRect(self._parent_window.hwnd, byref(self._rc_parent))
+                user32.GetClientRect(self._window.hwnd, byref(self._rc_parent))
                 rc = RECT()
                 user32.GetWindowRect(user32.GetDesktopWindow(), byref(rc))
-                user32.SetParent(self._parent_window.hwnd, 0)
-                user32.SetWindowPos(self._parent_window.hwnd, -1, 0, 0, rc.right, rc.bottom, 0)
+                user32.SetParent(self._window.hwnd, 0)
+                user32.SetWindowPos(self._window.hwnd, -1, 0, 0, rc.right, rc.bottom, 0)
             else:
-                user32.SetParent(self._parent_window.hwnd, self._parent_window.parent_window.hwnd)
+                user32.SetParent(self._window.hwnd, self._window.parent_window.hwnd)
                 user32.SetWindowPos(
-                    self._parent_window.hwnd, 0,
+                    self._window.hwnd, 0,
                     self._rc_parent.left,
                     self._rc_parent.top,
                     self._rc_parent.right - self._rc_parent.left,
@@ -799,10 +778,10 @@ class Player():
     # 0..1
     ########################################
     def get_volume(self) -> float:
-        if USE_MASTER_VOLUME or self._is_midi:
-            d = DWORD()
-            winmm.waveOutGetVolume(0, byref(d))
-            self._volume = (d.value & 0xFFFF) / 0xFFFF
+#        if USE_MASTER_VOLUME or self._is_midi:
+#            d = DWORD()
+#            winmm.waveOutGetVolume(0, byref(d))
+#            self._volume = (d.value & 0xFFFF) / 0xFFFF
         return self._volume
 
     ########################################
@@ -831,13 +810,7 @@ class Player():
     ########################################
     #
     ########################################
-    def is_seekable(self) -> bool:
-        return self._frame_step > 0
-
-    ########################################
-    #
-    ########################################
-    def load_sub_file(self, sub_file: str):
+    def load_sub_file(self, sub_file: str) -> bool:
         try:
             self._direct_vob_sub.put_FileName(sub_file)
             return True
@@ -847,7 +820,7 @@ class Player():
     ########################################
     #
     ########################################
-    def get_sub_tracks(self):
+    def get_sub_tracks(self) -> list:
         subs_tracks = []
         try:
             stream_select = self._direct_vob_sub.QueryInterface(IAMStreamSelect)
@@ -863,7 +836,7 @@ class Player():
     ########################################
     #
     ########################################
-    def select_sub_track(self, track_id):
+    def select_sub_track(self, track_id: int):
         if track_id == -1:
             self._direct_vob_sub.put_HideSubtitles(1)
         else:
@@ -918,7 +891,7 @@ class Player():
 
         if USE_MPC_RENDERER:
             proc_amp_value = DXVA2_ProcAmpValues()
-            setattr(proc_amp_value, k, DXVA2FloatToFixed(value))
+            setattr(proc_amp_value, k, _DXVA2FloatToFixed(value))
             self._mixer_control.SetProcAmpValues(self._mixer_items[k], byref(proc_amp_value))
         else:
             vmr9_amp = VMR9ProcAmpControl()
@@ -934,14 +907,12 @@ class Player():
     ########################################
     def _set_keepaspectratio(self, flag = True):
         if self._vmr_aspect_control:
-            return SUCCEEDED(self._vmr_aspect_control.SetAspectRatioMode(
-                VMR_ARMODE_LETTER_BOX if flag else VMR_ARMODE_NONE
-            ))
+            self._vmr_aspect_control.SetAspectRatioMode(VMR_ARMODE_LETTER_BOX if flag else VMR_ARMODE_NONE)
 
     ########################################
     # e.g. '4:3', '' to reset to default, None means resize to window
     ########################################
-    def set_aspect_ratio(self, ratio):
+    def set_aspect_ratio(self, ratio: str | None):
         self._use_ratio = ratio is not None
         if self._use_ratio:
             if ratio:
@@ -967,7 +938,9 @@ class Player():
     ########################################
     #
     ########################################
-    def get_audio_tracks(self):
+    def get_audio_tracks(self) -> list:
+        if self._is_midi:
+            return [(1, 'A: MIDI', True)]
         audio_tracks = []
         if self._stream_select:
             cnt = self._stream_select.Count()
@@ -980,14 +953,14 @@ class Player():
     ########################################
     #
     ########################################
-    def select_audio_track(self, track_id):
+    def select_audio_track(self, track_id: int):
         if self._stream_select:
             self._stream_select.Enable(track_id, 1)
 
     ########################################
     #
     ########################################
-    def get_video_tracks(self):
+    def get_video_tracks(self) -> list:
         video_tracks = []
         if self._stream_select:
             cnt = self._stream_select.Count()
@@ -1000,6 +973,6 @@ class Player():
     ########################################
     #
     ########################################
-    def select_video_track(self, track_id):
+    def select_video_track(self, track_id: int):
         if self._stream_select:
             self._stream_select.Enable(track_id, 1)

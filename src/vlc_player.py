@@ -13,9 +13,8 @@ TIMER_ID_END_REACHED = 1
 TIMER_ID_PLAYING = 2
 
 def init(vlc_path):
-#    vlc.dll = CDLL(os.path.join(vlc_path, 'libvlc.dll'))
-#    vlc.plugin_path = vlc_path
     vlc.init(vlc_path)
+
 
 ########################################
 #
@@ -25,7 +24,11 @@ class Player():
     ########################################
     #
     ########################################
-    def __init__(self, window, volume = .75):
+    def __init__(
+        self,
+        window: object,
+        volume: float = .75
+    ):
 
         self._window = window
         self._fullscreen = False
@@ -333,13 +336,6 @@ class Player():
     ########################################
     def set_time(self, secs):
         self._player.set_time(int(secs * 1000))
-
-    ########################################
-    #
-    ########################################
-    def is_seekable(self) -> bool:
-#        return self._player.is_seekable()  # Wrong for livestreams
-        return self._duration > 0
 
     ########################################
     #

@@ -5,6 +5,8 @@ from winapp.controls_themed.tooltips import *
 SLIDER_CLASS_NAME = 'SliderClass'
 
 EVENT_POS_CHANGED = 1
+EVENT_BUTTON_DOWN = 2
+EVENT_BUTTON_UP = 3
 
 SLIDER_BG_BRUSH = COLOR_3DFACE + 1
 SLIDER_BG_BRUSH_DARK = gdi32.CreateSolidBrush(0x171717)
@@ -109,6 +111,7 @@ class MySlider(Window):
             self.is_down = True
             self.pos = GET_X_LPARAM(lparam) / (self.width - 1)
             user32.InvalidateRect(hwnd, None, TRUE)
+            self.emit(EVENT_BUTTON_DOWN)
             self.emit(EVENT_POS_CHANGED, self.pos)
             self.register_message_callback(WM_MOUSEMOVE, _on_WM_MOUSEMOVE)
             user32.SetCapture(hwnd)
@@ -120,6 +123,7 @@ class MySlider(Window):
             self.is_down = False
             user32.ReleaseCapture()
             self.unregister_message_callback(WM_MOUSEMOVE, _on_WM_MOUSEMOVE)
+            self.emit(EVENT_BUTTON_UP, self.pos)
 
         self.register_message_callback(WM_LBUTTONDOWN, _on_WM_LBUTTONDOWN)
         self.register_message_callback(WM_LBUTTONUP, _on_WM_LBUTTONUP)

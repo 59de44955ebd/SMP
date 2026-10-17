@@ -57,6 +57,9 @@ if not HAS_VLC:
             HAS_VLC = os.path.isfile(os.path.join(VLC_PATH, 'libvlc.dll'))
         advapi32.RegCloseKey(hkey)
 
+MF_PATH = os.path.join(APP_DIR, 'engine_mediafoundation', 'mfplayer.dll')
+HAS_MF = os.path.isfile(MF_PATH)
+
 MPV_PATH = os.path.join(APP_DIR, 'engine_mpv', 'libmpv-2.dll')
 HAS_MPV = os.path.isfile(MPV_PATH)
 
@@ -64,6 +67,7 @@ engine = APP_SETTINGS.get('engine', 'webview')
 
 if (
     (engine == 'directshow' and not HAS_DIRECTSHOW) or
+    (engine == 'mediafoundation' and not HAS_MF) or
     (engine == 'mpv' and not HAS_MPV) or
     (engine == 'vlc' and not HAS_VLC)
 ):
@@ -73,6 +77,11 @@ if engine == 'directshow':
     import dshow_player
     dshow_player.init(DIRECTSHOW_PATH)
     Player = dshow_player.Player
+
+elif engine == 'mediafoundation':
+    import mf_player
+    mf_player.init(MF_PATH)
+    Player = mf_player.Player
 
 elif engine == 'mpv':
     import mpv_player
@@ -92,6 +101,8 @@ if IS_FROZEN:
 else:
     HMOD_RESOURCES = kernel32.LoadLibraryW(os.path.join(APP_DIR, 'resources.dll'))
 
+DOUBLE_CLICK_MS = user32.GetDoubleClickTime()
+
 
 class App(MainWin):
 
@@ -101,7 +112,7 @@ class App(MainWin):
     def __init__(self):
         self.auto_resize_to_video = APP_SETTINGS.get('auto_resize_to_video', True)
         self.color_values = APP_SETTINGS.get('color_values', {k: 100 for k in COLOR_KEYS})
-        self.fullscreen_dblclk = APP_SETTINGS.get('fullscreen_dblclk', True)
+#        self.fullscreen_dblclk = APP_SETTINGS.get('fullscreen_dblclk', True)
         self.minimize_to_tray = APP_SETTINGS.get('minimize_to_tray', False)
         self.remember_playlist = APP_SETTINGS.get('remember_playlist', False)
         self.show_controls = APP_SETTINGS.get('show_controls', True)
@@ -192,6 +203,7 @@ class App(MainWin):
 
             # Options
             IDM_ENGINE_DIRECTSHOW:      lambda: self.action_set_engine(IDM_ENGINE_DIRECTSHOW),
+            IDM_ENGINE_MEDIAFOUNDATION: lambda: self.action_set_engine(IDM_ENGINE_MEDIAFOUNDATION),
             IDM_ENGINE_MPV:             lambda: self.action_set_engine(IDM_ENGINE_MPV),
             IDM_ENGINE_VLC:             lambda: self.action_set_engine(IDM_ENGINE_VLC),
             IDM_ENGINE_WEBVIEW:         lambda: self.action_set_engine(IDM_ENGINE_WEBVIEW),
@@ -202,7 +214,6 @@ class App(MainWin):
             IDM_SINGLE_INSTANCE:        self.action_toggle_single_instance,
             IDM_REMEMBER_PLAYLIST:      self.action_toggle_remember_playlist,
             IDM_USE_META_TITLE:         self.action_toggle_use_meta_title,
-            IDM_FULLSCREEN_DBLCLK:      self.action_toggle_fullscreen_dblclk,
 
             # Help
             IDM_ABOUT:                  self.action_about,
@@ -266,8 +277,6 @@ class App(MainWin):
             user32.CheckMenuItem(self.h_menu, IDM_REMEMBER_PLAYLIST, flag)
         if self.use_meta_title:
             user32.CheckMenuItem(self.h_menu, IDM_USE_META_TITLE, flag)
-        if self.fullscreen_dblclk:
-            user32.CheckMenuItem(self.h_menu, IDM_FULLSCREEN_DBLCLK, flag)
 
         use_dark_mode = self.theme == THEME_DARK or (self.theme == THEME_AUTO and reg_should_use_dark_mode())
 
@@ -289,10 +298,16 @@ class App(MainWin):
             user32.InsertMenuW(h_menu_video, 0, MF_BYPOSITION | MF_POPUP, self.h_menu_video_tracks, 'Video &Track')
             user32.InsertMenuW(h_menu_video, 1, MF_BYPOSITION | MF_SEPARATOR, self.h_menu_video_tracks, '')
 
-        self.h_menu_sub_tracks = user32.CreateMenu()
-        h_menu_sub = user32.GetSubMenu(self.h_menu, IDX_MENU_SUB)
-        user32.InsertMenuW(h_menu_sub, 0, MF_BYPOSITION | MF_POPUP, self.h_menu_sub_tracks, 'Sub &Track')
-        user32.InsertMenuW(h_menu_sub, 1, MF_BYPOSITION | MF_SEPARATOR, self.h_menu_sub_tracks, '')
+        if engine == 'mediafoundation':
+            user32.RemoveMenu(self.h_menu, IDX_MENU_SUB, MF_BYPOSITION)
+            for idm in range(IDM_RATIO_4_3, IDM_RATIO_185_100 + 1):
+                user32.EnableMenuItem(self.h_menu, idm, MF_BYCOMMAND | MF_GRAYED)
+
+        else:
+            self.h_menu_sub_tracks = user32.CreateMenu()
+            h_menu_sub = user32.GetSubMenu(self.h_menu, IDX_MENU_SUB)
+            user32.InsertMenuW(h_menu_sub, 0, MF_BYPOSITION | MF_POPUP, self.h_menu_sub_tracks, 'Sub &Track')
+            user32.InsertMenuW(h_menu_sub, 1, MF_BYPOSITION | MF_SEPARATOR, self.h_menu_sub_tracks, '')
 
         ########################################
         #
@@ -404,8 +419,6 @@ class App(MainWin):
 
         self.register_message_callback(WM_NCHITTEST, _on_WM_NCHITTEST)
 
-        self.hide_focus_rects()
-
         self.update_ui_reset()
         self.update_ui_has_playlist(False)
 
@@ -419,7 +432,7 @@ class App(MainWin):
             self.set_stayontop(True)
 
         if len(sys.argv) > 1:
-            media_files = sys.argv[1:]  #[f for f in dropped_items if os.path.isfile(f)]
+            media_files = sys.argv[1:]
             self.create_timer(lambda: self.load_media_file(media_files[0]) or self.playlist.add_files(media_files), 0, True)
 
         elif last_playlist and self.remember_playlist:
@@ -494,17 +507,9 @@ class App(MainWin):
 
         self.static_logo.set_window_pos(
             width = width, height = height,
-            #hwnd_insert_after = HWND_TOPMOST,
             flags = SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER
         )
         user32.InvalidateRect(self.static_logo.hwnd, None, TRUE)
-
-#        print(width // 2 - 74, height // 2 - 74)
-#        self.static_logo.set_window_pos(
-#            x = width // 2 - 74, y = height // 2 - 74,
-#            #hwnd_insert_after = HWND_TOPMOST,
-#            flags = SWP_NOSIZE #| SWP_SHOWWINDOW#| SWP_NOACTIVATE | SWP_NOZORDER
-#        )
 
         user32.InvalidateRect(self.hwnd, byref(RECT(0, height, width, _height)), TRUE)
 
@@ -553,6 +558,7 @@ class App(MainWin):
 
         if (
             (idm == IDM_ENGINE_DIRECTSHOW and not HAS_DIRECTSHOW) or
+            (idm == IDM_ENGINE_MEDIAFOUNDATION and not HAS_MF) or
             (idm == IDM_ENGINE_MPV and not HAS_MPV) or
             (idm == IDM_ENGINE_VLC and not HAS_VLC)
         ):
@@ -634,14 +640,14 @@ class App(MainWin):
     #
     ########################################
     def timer_start(self):
-        self.create_timer(self._timer_proc, TIME_DISPLAY_UPDATE_PERIOD, timer_id=ID_TIMER_UPDATE_TIME)
+        self.create_timer(self._timer_proc, TIME_DISPLAY_UPDATE_PERIOD, timer_id=TIMER_ID_UPDATE_TIME)
         kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
 
     ########################################
     #
     ########################################
     def timer_stop(self):
-        self.kill_timer(ID_TIMER_UPDATE_TIME)
+        self.kill_timer(TIMER_ID_UPDATE_TIME)
         kernel32.SetThreadExecutionState(ES_CONTINUOUS)
 
     ########################################
@@ -685,9 +691,18 @@ class App(MainWin):
         ########################################
         def _on_WM_LBUTTONDOWN(hwnd, wparam, lparam):
             if self.media_file:
-                self.action_play_pause()
+                self.create_timer(self.action_play_pause, DOUBLE_CLICK_MS, True, timer_id=TIMER_ID_CLICK)
 
         self.video_container.register_message_callback(WM_LBUTTONDOWN, _on_WM_LBUTTONDOWN)
+
+        ########################################
+        #
+        ########################################
+        def _on_WM_LBUTTONDBLCLK(hwnd, wparam, lparam):
+            self.kill_timer(TIMER_ID_CLICK)
+            self.action_toggle_fullscreen()
+
+        self.video_container.register_message_callback(WM_LBUTTONDBLCLK, _on_WM_LBUTTONDBLCLK)
 
         ########################################
         #
@@ -698,16 +713,6 @@ class App(MainWin):
             user32.TrackPopupMenuEx(self.h_menu_popup, TPM_LEFTBUTTON, pt.x, pt.y, self.hwnd, 0)
 
         self.video_container.register_message_callback(WM_CONTEXTMENU, _on_WM_CONTEXTMENU)
-
-        ########################################
-        #
-        ########################################
-        def _on_WM_LBUTTONDBLCLK(hwnd, wparam, lparam):
-            if self.fullscreen_dblclk:
-                self.action_toggle_fullscreen()
-                _on_WM_LBUTTONDOWN(hwnd, wparam, lparam)
-
-        self.video_container.register_message_callback(WM_LBUTTONDBLCLK, _on_WM_LBUTTONDBLCLK)
 
         self.static_logo = Static(
             self,
@@ -733,11 +738,38 @@ class App(MainWin):
         def _on_seek_pos_changed(pos):
             secs = self.media_duration * pos
             self.mediaplayer.set_time(secs)
+
             if self._state == STATE_STOPPED:
                 self.update_ui_player_state(STATE_PAUSED)
+
+            elif self._state == STATE_PLAYING and not self.mediaplayer.is_playing():
+                self.mediaplayer.play()
+
             self.update_time_display(secs)
 
         self.slider_seek.connect(EVENT_POS_CHANGED, _on_seek_pos_changed)
+
+        ########################################
+        #
+        ########################################
+        def _on_scrub_start():
+            if engine == 'mediafoundation':
+                self.mediaplayer.scrub_start()
+            if self._state == STATE_PLAYING:
+                self.timer_stop()
+
+        self.slider_seek.connect(EVENT_BUTTON_DOWN, _on_scrub_start)
+
+        ########################################
+        #
+        ########################################
+        def _on_scrub_stop(pos):
+            if engine == 'mediafoundation':
+                self.mediaplayer.scrub_stop(self.media_duration * pos)
+            if self._state == STATE_PLAYING:
+                self.timer_start()
+
+        self.slider_seek.connect(EVENT_BUTTON_UP, _on_scrub_stop)
 
     ########################################
     #
@@ -1110,6 +1142,7 @@ class App(MainWin):
     #
     ########################################
     def action_about(self):
+
         ########################################
         #
         ########################################
@@ -1608,13 +1641,6 @@ class App(MainWin):
     ########################################
     #
     ########################################
-    def action_toggle_fullscreen_dblclk(self):
-        self.fullscreen_dblclk = not self.fullscreen_dblclk
-        self.check_menu_item(IDM_FULLSCREEN_DBLCLK, self.fullscreen_dblclk)
-
-    ########################################
-    #
-    ########################################
     def action_toggle_loop(self):
         self.is_loop = not self.is_loop
         self.check_menu_item(IDM_LOOP, self.is_loop)
@@ -1704,19 +1730,20 @@ class App(MainWin):
                 w, h = self.mediaplayer.get_size()
                 if self.auto_resize_to_video and not is_url and not user32.IsZoomed(self.hwnd):
                     self.set_window_pos(width = self.ui_width + w, height = self.ui_height + h, flags = SWP_NOMOVE)
-                self._active_sub_track_id = None
-                sub_tracks = self.mediaplayer.get_sub_tracks()
-                if sub_tracks:
-                    user32.AppendMenuW(self.h_menu_sub_tracks, MF_STRING, IDM_SUB_TRACK, 'Disable')
-                    self.COMMAND_MESSAGE_MAP[IDM_SUB_TRACK] = lambda: self.action_select_sub_track(-1)
-                    for track in sub_tracks:
-                        track_id, name, enabled = track
-                        idm = IDM_SUB_TRACK + 1 + track_id
-                        self.COMMAND_MESSAGE_MAP[idm] = lambda track_id=track_id: self.action_select_sub_track(track_id)
-                        user32.AppendMenuW(self.h_menu_sub_tracks, MF_STRING | (MF_CHECKED if enabled else 0), idm, name)
-                        if enabled:
-                            self._active_sub_track_id = track_id
-                    user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_ENABLED)
+                if self.engine != 'mediafoundation':
+                    self._active_sub_track_id = None
+                    sub_tracks = self.mediaplayer.get_sub_tracks()
+                    if sub_tracks:
+                        user32.AppendMenuW(self.h_menu_sub_tracks, MF_STRING, IDM_SUB_TRACK, 'Disable')
+                        self.COMMAND_MESSAGE_MAP[IDM_SUB_TRACK] = lambda: self.action_select_sub_track(-1)
+                        for track in sub_tracks:
+                            track_id, name, enabled = track
+                            idm = IDM_SUB_TRACK + 1 + track_id
+                            self.COMMAND_MESSAGE_MAP[idm] = lambda track_id=track_id: self.action_select_sub_track(track_id)
+                            user32.AppendMenuW(self.h_menu_sub_tracks, MF_STRING | (MF_CHECKED if enabled else 0), idm, name)
+                            if enabled:
+                                self._active_sub_track_id = track_id
+                        user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_ENABLED)
                 if self.engine != 'webview':
                     self._active_video_track_id = None
                     video_tracks = self.mediaplayer.get_video_tracks()
@@ -1819,10 +1846,11 @@ class App(MainWin):
             while ok:
                 ok = user32.RemoveMenu(self.h_menu_video_tracks, 0, MF_BYPOSITION)
             user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_VIDEO), 0, MF_BYPOSITION | MF_GRAYED)
-        ok = TRUE
-        while ok:
-            ok = user32.RemoveMenu(self.h_menu_sub_tracks, 0, MF_BYPOSITION)
-        user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_GRAYED)
+        if self.engine != 'mediafoundation':
+            ok = TRUE
+            while ok:
+                ok = user32.RemoveMenu(self.h_menu_sub_tracks, 0, MF_BYPOSITION)
+            user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_SUB), 0, MF_BYPOSITION | MF_GRAYED)
 
         self.static_logo.show(SW_SHOW)
 
@@ -1837,11 +1865,13 @@ class App(MainWin):
         for idm in (IDM_SKIP_BACK, IDM_SKIP_FORWARD):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, int(has_duration))
         state = MF_BYCOMMAND | MF_ENABLED
-        for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_CLOSE, IDM_SNAPSHOT, IDM_SHOW_MEDIAINFOS):
+        for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_CLOSE, IDM_SHOW_MEDIAINFOS):
             user32.EnableMenuItem(self.h_menu, idm, state)
+
         state = MF_BYCOMMAND | (MF_ENABLED if has_video else MF_GRAYED)
-        for idm in (IDM_FULLSCREEN, IDM_ZOOM_50, IDM_ZOOM_100, IDM_ZOOM_200):
+        for idm in (IDM_SNAPSHOT, IDM_FULLSCREEN, IDM_ZOOM_50, IDM_ZOOM_100, IDM_ZOOM_200):
             user32.EnableMenuItem(self.h_menu, idm, state)
+
         state = MF_BYCOMMAND | (MF_ENABLED if has_duration else MF_GRAYED)
         for idm in (IDM_SKIP_BACK, IDM_SKIP_FORWARD, IDM_STEP_BACK, IDM_STEP_FORWARD, IDM_REWIND):
             user32.EnableMenuItem(self.h_menu, idm, state)
@@ -1899,6 +1929,7 @@ class App(MainWin):
     ########################################
     def _timer_proc(self):
         self.update_time()
+
         # Detect end reached
         if not self.mediaplayer.is_playing() and not self.is_loop:
             if self.playlist.play_next():
@@ -1963,7 +1994,7 @@ class App(MainWin):
         settings = {prop: getattr(self, prop) for prop in (
             'show_millisecs', 'show_menu', 'show_seek', 'show_controls', 'show_status', 'show_playlist',
             'theme', 'volume', 'stayontop', 'minimize_to_tray', 'auto_resize_to_video', 'single_instance',
-            'remember_playlist', 'use_meta_title', 'fullscreen_dblclk', 'color_values', 'engine'
+            'remember_playlist', 'use_meta_title', 'color_values', 'engine'
         )}
         settings['last_playlist'] = self.playlist.as_list() if self.remember_playlist else []
         settings['splitter_pos'] = self.pane.splitter.pos

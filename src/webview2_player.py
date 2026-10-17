@@ -24,8 +24,12 @@ class Player(WebView2):
     ########################################
     #
     ########################################
-    def __init__(self,  parent_window, volume = .75):
-        self._window = parent_window
+    def __init__(
+        self,
+        window: object,
+        volume: float = .75
+    ):
+        self._window = window
         self._volume = volume
 
         self._fullscreen = False
@@ -54,7 +58,7 @@ class Player(WebView2):
         self._initialized = False
 
         super().__init__(
-            parent_hwnd = parent_window.hwnd,
+            parent_hwnd = window.hwnd,
             url = 'file:///' + os.path.join(RES_DIR, 'index.htm').replace('\\', '/'),
             is_hidden = True,
         )
@@ -66,7 +70,7 @@ class Player(WebView2):
             width, height = lparam & 0xFFFF, (lparam >> 16) & 0xFFFF
             self.put_bounds(RECT(0, 0, width, height))
 
-        parent_window.register_message_callback(WM_SIZE, _on_WM_SIZE)
+        window.register_message_callback(WM_SIZE, _on_WM_SIZE)
 
         ########################################
         #
@@ -319,12 +323,6 @@ class Player(WebView2):
         self._time = sec
         if self._initialized:
             self.execute_js(f'player.set_time({sec});')
-
-    ########################################
-    #
-    ########################################
-    def is_seekable(self) -> bool:
-        return self._duration > 0
 
     ########################################
     #

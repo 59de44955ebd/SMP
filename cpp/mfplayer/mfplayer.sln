@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.37611.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mfplayer", "mfplayer.vcxproj", "{6216E7DD-06CE-4507-8CCD-3A39DE586C73}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6216E7DD-06CE-4507-8CCD-3A39DE586C73}.Debug|x64.ActiveCfg = Debug|x64
+		{6216E7DD-06CE-4507-8CCD-3A39DE586C73}.Debug|x64.Build.0 = Debug|x64
+		{6216E7DD-06CE-4507-8CCD-3A39DE586C73}.Debug|x86.ActiveCfg = Debug|Win32
+		{6216E7DD-06CE-4507-8CCD-3A39DE586C73}.Debug|x86.Build.0 = Debug|Win32
+		{6216E7DD-06CE-4507-8CCD-3A39DE586C73}.Release|x64.ActiveCfg = Release|x64
+		{6216E7DD-06CE-4507-8CCD-3A39DE586C73}.Release|x64.Build.0 = Release|x64
+		{6216E7DD-06CE-4507-8CCD-3A39DE586C73}.Release|x86.ActiveCfg = Release|Win32
+		{6216E7DD-06CE-4507-8CCD-3A39DE586C73}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1FE3C985-10C2-4423-A018-E5A1ED5F8757}
+	EndGlobalSection
+EndGlobal

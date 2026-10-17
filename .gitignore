@@ -11,3 +11,9 @@ _backup.rar
 /engine_mpv/
 /engine_vlc/
 /settings.json
+
+# VS stuff
+*.vs
+*.user
+/cpp/mfplayer/Win32/
+/cpp/mfplayer/x64/

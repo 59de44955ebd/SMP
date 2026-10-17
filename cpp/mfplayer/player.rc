@@ -1,0 +1,29 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+#include "windows.h"
+
+1 VERSIONINFO
+FILEVERSION APP_MAJORVERSION, APP_MINORVERSION, 0, 0
+PRODUCTVERSION APP_MAJORVERSION, APP_MINORVERSION, 0, 0
+FILEOS 0x40004
+FILETYPE 0x1
+{
+	BLOCK "StringFileInfo"
+	{
+		BLOCK "040904B0"
+		{
+			VALUE "CompanyName", "59de44955ebd"
+				VALUE "FileDescription", APP_NAME
+				VALUE "FileVersion", APP_VERSION_STR
+				VALUE "InternalName", APP_NAME
+				VALUE "ProductName", APP_NAME
+				VALUE "ProductVersion", APP_VERSION_STR
+		}
+	}
+
+	BLOCK "VarFileInfo"
+	{
+		VALUE "Translation", 0x0409 0x04B0
+	}
+}

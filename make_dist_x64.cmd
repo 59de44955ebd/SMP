@@ -83,6 +83,7 @@ copy "resources\spessasynth_lib.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\spessasynth_processor.min.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\srt.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\stb-vorbis.js" "dist\%APP_NAME%\%DATA_DIR%\"
+xcopy /e "engine_mediafoundation" "dist\%APP_NAME%\%DATA_DIR%\engine_mediafoundation\" >nul
 exit /B
 
 

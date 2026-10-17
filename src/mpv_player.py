@@ -25,6 +25,7 @@ USE_BASS_MIDI = (
     os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'bassmidi.dll'))
 )
 
+
 ########################################
 #
 ########################################
@@ -33,8 +34,11 @@ class Player():
     ########################################
     #
     ########################################
-    def __init__(self, window, volume = .75):
-
+    def __init__(
+        self,
+        window: object,
+        volume: float = .75
+    ):
         self._window = window
         self._fullscreen = False
         self._has_audio = False
@@ -81,13 +85,15 @@ class Player():
         ext = os.path.splitext(media_file)[1].lower()
         if ext in ('.mid', '.rmi', '.kar'):
             self._is_midi = True
+            self._filename = media_file
             if self._midi_player is None:
-                import dshow_player
-                dshow_player.USE_BASS_MIDI = USE_BASS_MIDI
+                import midi_player
+                midi_player.USE_BASS_MIDI = USE_BASS_MIDI
                 if USE_BASS_MIDI:
-                    dshow_player.init(DIRECTSHOW_PATH)
-                self._midi_player = dshow_player.Player(self._window, volume = self._volume, auto_resize = False)
-                self._filename = media_file
+                    midi_player.init(DIRECTSHOW_PATH)
+                self._midi_player = midi_player.Player(self._window, volume = self._volume)
+                if self._loop:
+                    self._midi_player.set_loop(True
             else:
                 self._midi_player.set_volume(self._volume)
             return self._midi_player.load_media_file(media_file, on_parsed)
@@ -130,9 +136,9 @@ class Player():
     ########################################
     #
     ########################################
-    def get_audio_tracks(self):
+    def get_audio_tracks(self) -> list:
         if self._is_midi:
-            return []
+            return [(1, 'MIDI', True)]
         audio_tracks = []
         for row in self._track_list:  # self._player.track_list:
             if row['type'] == 'audio':
@@ -146,13 +152,13 @@ class Player():
     ########################################
     #
     ########################################
-    def select_audio_track(self, track_id):
+    def select_audio_track(self, track_id: int):
         self._player.aid = str(track_id)
 
     ########################################
     #
     ########################################
-    def get_video_tracks(self):
+    def get_video_tracks(self) -> list:
         video_tracks = []
         for row in self._track_list:  # self._player.track_list:
             if row['type'] == 'video':
@@ -166,14 +172,14 @@ class Player():
     ########################################
     #
     ########################################
-    def select_video_track(self, track_id):
+    def select_video_track(self, track_id: int):
         self._player.vid = str(track_id)
 #        self.skip_back(1)
 
     ########################################
     #
     ########################################
-    def get_sub_tracks(self):
+    def get_sub_tracks(self) -> list:
         subs_tracks = []
         for row in self._player.track_list:
             if row['type'] == 'sub':
@@ -183,7 +189,7 @@ class Player():
     ########################################
     #
     ########################################
-    def select_sub_track(self, track_id):
+    def select_sub_track(self, track_id: int):
         if track_id == -1:
             self._player.sid = 'no'
         else:
@@ -279,7 +285,10 @@ class Player():
     #
     ########################################
     def set_loop(self, flag: bool):
+        self._loop = flag
         self._player.loop = 'yes' if flag else 'no'
+        if self._midi_player:
+            self._midi_player.set_loop(flag)
 
     ########################################
     #
@@ -306,16 +315,10 @@ class Player():
     ########################################
     #
     ########################################
-    def set_time(self, secs):
+    def set_time(self, secs: float):
         if self._is_midi:
             return self._midi_player.set_time(secs)
         self._player.time_pos = secs
-
-    ########################################
-    #
-    ########################################
-    def is_seekable(self) -> bool:
-        return self._player.seekable
 
     ########################################
     #
@@ -339,7 +342,7 @@ class Player():
     ########################################
     #
     ########################################
-    def skip_back(self, secs):
+    def skip_back(self, secs: float):
         if self._is_midi:
             return self._midi_player.skip_back(secs)
         self._player.seek(-secs)
@@ -349,7 +352,7 @@ class Player():
     ########################################
     #
     ########################################
-    def skip_forward(self, secs):
+    def skip_forward(self, secs: float):
         if self._is_midi:
             return self._midi_player.skip_forward(secs)
         self._player.seek(secs)
@@ -359,7 +362,7 @@ class Player():
     ########################################
     #
     ########################################
-    def step_back(self, frames=1):
+    def step_back(self, frames: int =1 ):
         if self._is_midi:
             return
         for i in range(frames):
@@ -370,7 +373,7 @@ class Player():
     ########################################
     #
     ########################################
-    def step_forward(self, frames=1):
+    def step_forward(self, frames: int = 1):
         if self._is_midi:
             return
         for i in range(frames):
@@ -421,7 +424,7 @@ class Player():
     ########################################
     # e.g. '4:3', '' to reset to default, None means resize to window
     ########################################
-    def set_aspect_ratio(self, ratio):
+    def set_aspect_ratio(self, ratio: str | None):
         if ratio is None:
             self._player.keepaspect = False
         else:

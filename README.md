@@ -2,9 +2,9 @@
 
 ![](screenshots/smp-win11-dark.png)
 
-SMP is a simple desktop media player for Windows 11 x64 written in Python. What makes it special is that it supports 4 different multimedia engines (or frameworks) that a user can choose from. Note that changing the active engine requires the current player instance to be restarted.
+SMP is a simple desktop media player for Windows 11 x64 written in Python. What makes it special is that it supports 5 different multimedia engines (or frameworks) that a user can choose from. Note that changing the active engine requires the current player instance to be restarted.
 
-The application comes initially only with the `webview` engine (and the `vlc` engine, if a VLC media player is found on the PC), other engines are automatically downloaded (from [here](https://github.com/59de44955ebd/SMP/releases/tag/engines)) when selected for the first time.
+The application comes initially only with the `webview` and the `mediafoundation` engine (and the `vlc` engine, if a VLC media player is found on the PC), other engines are automatically downloaded (from [here](https://github.com/59de44955ebd/SMP/releases/tag/engines)) when selected for the first time.
 
 The player's UI is (quite obviously) inspired by [MPC-HC](https://github.com/clsid2/mpc-hc), whereas the main menus are closer to the [VLC media player](https://www.videolan.org/).
 
@@ -16,17 +16,23 @@ DirectShow playback is based on [LAV Filters](https://github.com/Nevcairiel/LAVF
 
 Filters are loaded directly from .dll and therefor don't need to be registered in the system.
 
-### 2. mpv
+### 2. mediafoundation
+
+This engine uses Microsoft's [Media Foundation](https://learn.microsoft.com/en-us/windows/win32/medfound/microsoft-media-foundation-sdk) for playback, based on a small wrapper `.dll` that is loaded via ctypes/libffi. It doesn't support subtitles, and the aspect ratio can't be changed (other than turned off).
+
+Since `Media Foundation` can't play MIDI files, an additional minimal DirectShow player that doesn't depend on the DirectShow engine is used to play those.
+
+### 3. mpv
 
 [mpv](https://mpv.io/) playback is based on [libmpv](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/) and its Python binding [python-mpv](https://github.com/jaseg/python-mpv).
 
 Since mpv can't play MIDI files, an additional minimal DirectShow player that doesn't depend on the DirectShow engine is used to play those.
 
-### 3. vlc
+### 4. vlc
 
 VLC playback is based on [libVLC](https://images.videolan.org/vlc/libvlc.html) and its Python binding [python-vlc](https://github.com/oaubert/python-vlc).
 
-### 4. webview
+### 5. webview
 
 WebView playback uses [Microsoft Edge WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2), which is based on recent Chrome/Chromium versions and comes preinstalled with Windows 11. MIDI support is based on [spessasynth_lib](https://github.com/spessasus/spessasynth_lib).
 
