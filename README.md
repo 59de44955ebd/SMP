@@ -12,15 +12,17 @@ The player's UI is (quite obviously) inspired by [MPC-HC](https://github.com/cls
 
 ### 1. directshow
 
-DirectShow playback is based on [LAV Filters](https://github.com/Nevcairiel/LAVFilters) (which are in turn based on [FFmpeg](https://ffmpeg.org/)) and [MPC Video Renderer](https://github.com/Aleksoid1978/VideoRenderer). Subtitles support is based on [VSFilter](https://github.com/v0lt/VSFilterBE) (DirectVobSub). MIDI files are played with [Bass Audio Source](https://github.com/v0lt/BassAudioSource) and [BASSMIDI](https://www.un4seen.com/doc/#bassmidi/bassmidi.html), which allows to use a SoundFont as soundbank (see [MIDI Support](#midi-support) below).
+[DirectShow](https://en.wikipedia.org/wiki/DirectShow) playback is based on [LAV Filters](https://github.com/Nevcairiel/LAVFilters) (which are in turn based on [FFmpeg](https://ffmpeg.org/)) and [MPC Video Renderer](https://github.com/Aleksoid1978/VideoRenderer). Subtitles support is based on [VSFilter](https://github.com/v0lt/VSFilterBE) (DirectVobSub). MIDI files are played with [Bass Audio Source](https://github.com/v0lt/BassAudioSource) and [BASSMIDI](https://www.un4seen.com/doc/#bassmidi/bassmidi.html), which allows to use a SoundFont as soundbank (see [MIDI Support](#midi-support) below).
 
 Filters are loaded directly from .dll and therefor don't need to be registered in the system.
 
 ### 2. mediafoundation
 
-This engine uses Microsoft's [Media Foundation](https://learn.microsoft.com/en-us/windows/win32/medfound/microsoft-media-foundation-sdk) for playback, based on a small wrapper `.dll` that is loaded via ctypes/libffi. It doesn't support subtitles, and the aspect ratio can't be changed (other than turned off).
+This engine uses Microsoft's [Media Foundation](https://learn.microsoft.com/en-us/windows/win32/medfound/microsoft-media-foundation-sdk) for playback, based on a small [wrapper .dll](cpp/mfplayer/) that is loaded via ctypes/libffi. It doesn't support subtitles, and the aspect ratio can't be changed (other than turned off).
 
 Since `Media Foundation` can't play MIDI files, an additional minimal DirectShow player that doesn't depend on the DirectShow engine is used to play those.
+
+This engine supports less container formats and codecs than engines `directshow` or `vlc`, but has the benefit of minimum extra file size since `Media Foundation` is provided by the OS.
 
 ### 3. mpv
 
@@ -30,13 +32,13 @@ Since mpv can't play MIDI files, an additional minimal DirectShow player that do
 
 ### 4. vlc
 
-VLC playback is based on [libVLC](https://images.videolan.org/vlc/libvlc.html) and its Python binding [python-vlc](https://github.com/oaubert/python-vlc).
+[VLC](https://www.videolan.org/) playback is based on [libVLC](https://www.videolan.org/vlc/libvlc.html) and its Python binding [python-vlc](https://github.com/oaubert/python-vlc).
 
 ### 5. webview
 
 WebView playback uses [Microsoft Edge WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2), which is based on recent Chrome/Chromium versions and comes preinstalled with Windows 11. MIDI support is based on [spessasynth_lib](https://github.com/spessasus/spessasynth_lib).
 
-This engine supports less features, container formats and codecs than the other engines, but has the benefit of minimum extra file size, since WebView2 is already provided by the OS.
+This engine supports less features, container formats and codecs than the other engines, but has the benefit of minimum extra file size since `WebView2` is provided by the OS.
 
 ## MIDI Support
 
