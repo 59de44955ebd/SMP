@@ -16,11 +16,8 @@ def init(dll_file):
     _mf.Init.argtypes = (HWND, HWND)
     #STDAPI CloseFile()
     #STDAPI GetAspectRatio(LPDWORD pRatio)
-    _mf.GetAspectRatio.argtypes = (LPDWORD,)
     #STDAPI GetCapabilities(LPDWORD pCaps)
-    _mf.GetCapabilities.argtypes = (LPDWORD,)
     #STDAPI GetCharacteristics(LPDWORD pCaps)
-    _mf.GetCharacteristics.argtypes = (LPDWORD,)
     #STDAPI GetCurrentImage(BITMAPINFOHEADER *pBih, BYTE **pDib, DWORD *pcbDib, LONGLONG *pTimeStamp)
     _mf.GetCurrentImage.argtypes = (POINTER(BITMAPINFOHEADER), POINTER(LPBYTE), LPDWORD, POINTER(c_longlong))
     #STDAPI GetDuration(UINT64 *pDur)
@@ -28,15 +25,12 @@ def init(dll_file):
     #STDAPI GetFrameRate(float *pfRate)
     _mf.GetFrameRate.argtypes = (LPFLOAT,)
     #STDAPI GetMetadata(BYTE **pData, DWORD *pDataSize)
-    _mf.GetMetadata.argtypes = (POINTER(LPBYTE), LPDWORD)
     #STDAPI GetMute(BOOL *pbMute)
-    _mf.GetMute.argtypes = (LPBOOL,)
     #STDAPI GetRate(float *pfRate)
     _mf.GetRate.argtypes = (LPFLOAT,)
     #STDAPI GetSize(LPDWORD pSize)
     _mf.GetSize.argtypes = (LPDWORD,)
     #STDAPI GetState(LPINT pState)
-    _mf.GetState.argtypes = (LPINT,)
     #STDAPI GetStream(DWORD idx, LPDWORD pType, LPDWORD pFourCC, LPBOOL pSelected, LPWSTR lang, size_t lang_buf_size)
     _mf.GetStream.argtypes = (DWORD, LPDWORD, LPDWORD, LPBOOL, LPWSTR, SIZE_T)
     #STDAPI GetStreamCount(LPDWORD pCount)
@@ -44,7 +38,6 @@ def init(dll_file):
     #STDAPI GetTime(MFTIME *pTime)
     _mf.GetTime.argtypes = (POINTER(MFTIME),)
     #STDAPI GetVolume(float *pfLevel)
-    _mf.GetVolume.argtypes = (LPFLOAT,)
     #STDAPI HasAudio(LPBOOL pHasAudio)
     _mf.HasAudio.argtypes = (LPBOOL,)
     #STDAPI HasVideo(LPBOOL pHasVideo)
@@ -55,7 +48,6 @@ def init(dll_file):
     #STDAPI Play()
     #STDAPI Repaint()
     #STDAPI ResizeVideo(WORD width, WORD height)
-    #STDAPI Scrub(BOOL bScrub)
     #STDAPI SelectAudioStream(DWORD idx)
     #STDAPI SelectVideoStream(DWORD idx)
     #STDAPI SetAspectRatioMode(DWORD mode)
@@ -68,7 +60,6 @@ def init(dll_file):
     #STDAPI SetTime(MFTIME time)
     _mf.SetTime.argtypes = (MFTIME,)
     #STDAPI SetVideoRect(RECT rc)
-    _mf.SetVideoRect.argtypes = (RECT,)
     #STDAPI SetVolume(float fLevel)
     _mf.SetVolume.argtypes = (FLOAT,)
     #STDAPI Shutdown()
@@ -76,14 +67,10 @@ def init(dll_file):
 
 WM_APP_NOTIFY = WM_APP + 1
 
-# Custom
 STATE_CLOSED = 0        # No session.
-STATE_READY = 1         # Session was created, ready to open a file.
-STATE_OPEN_PENDING = 2  # Session is opening a file.
-STATE_PLAYING = 3       # Session is playing a file.
-STATE_PAUSED = 4        # Session is paused.
-STATE_STOPPED = 5       # Session is stopped (ready to play).
-STATE_CLOSING = 6       # Application has closed the session, but is waiting for MESessionClosed.
+STATE_PLAYING = 1       # Session is playing a file.
+STATE_PAUSED = 2        # Session is paused.
+STATE_STOPPED = 3       # Session is stopped (ready to play).
 
 SCRUB_NONE = 0
 SCRUB_ACTIVE = 1
