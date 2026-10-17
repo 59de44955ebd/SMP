@@ -8,7 +8,7 @@ The application comes initially only with the `webview` and the `mediafoundation
 
 The player's UI is (quite obviously) inspired by [MPC-HC](https://github.com/clsid2/mpc-hc), whereas the main menus are closer to the [VLC media player](https://www.videolan.org/).
 
-## MultiMedia Engines
+## Multimedia Engines
 
 ### 1. directshow
 
