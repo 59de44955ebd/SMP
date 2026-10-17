@@ -11,7 +11,7 @@ _backup.rar
 /engine_mpv/
 /engine_vlc/
 /settings.json
-
+/.vscode
 # VS stuff
 *.vs
 *.user

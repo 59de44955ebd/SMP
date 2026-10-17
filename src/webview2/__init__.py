@@ -11,9 +11,9 @@ from .interfaces import *
 from .handlers import *
 
 if getattr(sys, 'frozen', False):
-    loader_dll = os.path.join(os.path.dirname(__file__), 'loader.dll')
+    loader_dll = os.path.join(os.path.dirname(__file__), 'webview2_loader.dll')
 else:
-    loader_dll = os.path.join(os.path.dirname(__file__), 'native', get_platform(), 'loader.dll')
+    loader_dll = os.path.join(os.path.dirname(__file__), 'native', get_platform(), 'webview2_loader.dll')
 
 LOADER = CDLL(loader_dll)
 LOADER.CreateEnvironmentWithOptions.argtypes = (LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR, BOOL, POINTER(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler))

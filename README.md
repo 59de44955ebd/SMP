@@ -45,3 +45,54 @@ This engine supports less features, container formats and codecs than the other 
 All engines support playing MIDI files (`.mid` `.rmi` `.kar`). All but `mpv` use an external [SoundFont](https://en.wikipedia.org/wiki/SoundFont) file as soundbank. To keep the player's download file size small, only a [small SoundFont](https://musical-artifacts.com/artifacts/5190) (3 MB, based on GM.dls that comes with Windows) is included as file `soundbank.sf2` in the `data` folder. For achieving better MIDI sound quality you can replace this file with a high-quality SoundFont file like e.g. [FluidR3_GM.sf2](https://musical-artifacts.com/artifacts/738) (141 MB) or [Reality_GMGS_falcomod.sf2](https://www.musical-artifacts.com/artifacts/6003) (34 MB). After downloading such a file, just rename it `soundbank.sf2` and put it into `data`.
 
 If you happen to be a MIDI nerd, engine `webview` is the only one that supports the rather exotic but interesting [SF2 RMIDI](https://github.com/spessasus/sf2-rmidi-specification) file format that allows to combine MIDI and soundbank data in a single `.rmi` file.
+
+## Implementation
+
+For each of the 5 available multimedia engines there is a module that implements a class called `Player` with the same public interface:
+
+- [dshow_player.py](src/dshow_player.py)
+- [mf_player.py](src/mf_player.py)
+- [mpv_player.py](src/mpv_player.py)
+- [vlc_player.py](src/vlc_player.py)
+- [webview2_player.py](src/webview2_player.py)
+
+The public interface looks like this:
+```python
+__init__(self, window: object, volume: float = .75)
+close_file(self)
+get_audio_tracks(self) -> list
+get_duration(self) -> float
+get_size(self) -> tuple
+get_sub_tracks(self) -> list
+get_time(self) -> float
+get_video_tracks(self) -> list
+get_volume(self) -> float
+has_audio(self) -> bool
+has_video(self) -> bool
+hide_subtitles(self, flag: bool = True)
+is_fullscreen(self) -> bool
+is_midi(self) -> bool
+is_playing(self) -> bool
+load_media_file(self, media_file: str, on_parsed: callable) -> bool
+load_sub_file(self, sub_file: str) -> bool
+pause(self)
+play(self)
+select_audio_track(self, track_id: int)
+select_sub_track(self, track_id: int)
+select_video_track(self, track_id: int)
+set_aspect_ratio(self, ratio: str | None)
+set_brightness(self, value: float)
+set_contrast(self, value: float)
+set_fullscreen(self, flag: bool)
+set_loop(self, flag: bool)
+set_hue(self, value: float) pass
+set_saturation(self, value: float)
+set_time(self, secs: float)
+set_volume(self, v: float)
+skip_back(self, secs: float)
+skip_forward(self, secs: float)
+step_back(self, frames: int = 1)
+step_forward(self, frames: int = 1)
+stop(self)
+take_snapshot(self, filename: str, callback: callable)
+```

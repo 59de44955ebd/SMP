@@ -75,7 +75,7 @@ echo.
 echo ****************************************
 echo Copying resources...
 echo ****************************************
-copy "src\webview2\native\win-amd64\loader.dll" "dist\%APP_NAME%\%DATA_DIR%\"
+copy "src\webview2\native\win-amd64\webview2_loader.dll" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\index.htm" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\soundbank.sf2" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\spessasynth_core.js" "dist\%APP_NAME%\%DATA_DIR%\"
