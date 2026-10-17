@@ -148,10 +148,11 @@ class Event:
     MESourceRateChangeRequested = 220
     MESourceMetadataChanged = 221
 
-EVENT_NAMES = {}
-for k, v in Event.__dict__.items():
-    if not k.startswith('_'):
-        EVENT_NAMES[v] = k
+# For debugging reveived events
+#DEBUG_EVENT_NAMES = {}
+#for k, v in Event.__dict__.items():
+#    if not k.startswith('_'):
+#        DEBUG_EVENT_NAMES[v] = k
 
 MF_TOPOSTATUS_READY = 100
 
@@ -246,10 +247,8 @@ class Player():
         ########################################
         def _on_WM_APP_NOTIFY(hwnd, wparam, lparam):
             event_type, hr = wparam, lparam
+#            print(DEBUG_EVENT_NAMES[event_type] if event_type in DEBUG_EVENT_NAMES else event_type, hr)
 
-#            print(EVENT_NAMES[event_type] if event_type in EVENT_NAMES else event_type, hr)
-
-            ########################################
             if event_type == Event.MESessionTopologyStatus:
                 if hr == MF_TOPOSTATUS_READY:
 
@@ -276,31 +275,10 @@ class Player():
                         _mf.Play()
                         self.on_parsed(True)
 
-            ########################################
-#            elif event_type == Event.MESessionRateChanged:
-#                if self._foo:
-#                    self._foo = False
-#                    _mf.Pause()
-#                    _mf.SetRate(1.0)
-#                    print('>>>>>> SCRUB ENDED', self._get_rate())
-#                    _mf.Play()
-
-            ########################################
             elif event_type == Event.MESessionScrubSampleComplete:
-#                print('>>> MESessionScrubSampleComplete')
                 self._scrub_pending = False
                 if self._scrub_state == SCRUB_CLOSING:
                     self._scrub_state == SCRUB_NONE
-
-
-
-#                    if self._state != STATE_PLAYING and self.has_video():
-#                        _mf.Play()
-#                        _mf.Pause()
-#                        time.sleep(.1)
-#                        _mf.SetVolume(self._volume)
-
-
 
                     self._set_rate(1.0)
 
@@ -317,7 +295,6 @@ class Player():
                         time.sleep(.1)
                         _mf.SetVolume(self._volume)
 
-            ########################################
             elif event_type == Event.MEEndOfPresentation:
                 # The MEEndOfPresentation event signals that playback has reached the end of the file.
                 # The Media Session automatically switches back to the stopped state.
@@ -371,7 +348,7 @@ class Player():
         return f.value
 
     ########################################
-    # We use this to switch from rate 0 to 1 and vv, which requires paused state
+    # We use this to switch from rate 0 to 1 and v.v., which requires paused state
     ########################################
     def _set_rate(self, rate: float):
         _mf.Pause()
@@ -473,11 +450,8 @@ class Player():
     def stop(self):
         if self._is_midi:
             return self._midi_player.stop()
-
         _mf.SetTime(0)
         _mf.Stop()
-#        _mf.Pause()
-
         self._state = STATE_STOPPED
 
     ########################################
@@ -551,13 +525,7 @@ class Player():
     def is_playing(self) -> bool:
         if self._is_midi:
             return self._midi_player.is_playing()
-
         return self._state == STATE_PLAYING
-
-#        state = INT()
-#        _mf.GetState(byref(state))
-#        #return state.value == STATE_PLAYING
-#        return state.value != STATE_PAUSED and state.value != STATE_STOPPED
 
     ########################################
     #
@@ -728,25 +696,6 @@ class Player():
 
         # Dont't allow to scrub beyond duration, otherwise it gets tricky
         hr = _mf.SetTime(int(min(secs * MF_UNITS_PER_SEC, self._duration - MF_UNITS_PER_SEC / 5)))
-
-#        self._set_rate(1.0)
-#
-#        if self._state == STATE_PLAYING:
-#            return _mf.Play()
-#
-#        if self.has_video():
-#            if not self._scrub_pending:
-#                ########################################
-#                # We even start it if it was paused before to fix a bug in Media Foundations's
-#                # EVR, otherwise it occasionally stops painting the video when paused.
-#                ########################################
-#                _mf.Play()
-#                _mf.Pause()
-#                time.sleep(.1)
-#                _mf.SetVolume(self._volume)
-#            else:
-#                print('ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ')
-#                _mf.SetVolume(self._volume)
 
     ########################################
     #
