@@ -3,8 +3,8 @@ import time
 
 from winapp.window import *
 
-MFTIME = c_int64 #c_longlong
 LPFLOAT = POINTER(FLOAT)
+MFTIME = c_longlong
 SIZE_T = c_longlong
 
 _mf = None
