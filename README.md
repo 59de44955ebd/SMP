@@ -18,7 +18,7 @@ Filters are loaded directly from .dll and therefor don't need to be registered i
 
 ### 2. mediafoundation
 
-This engine uses Microsoft's [Media Foundation](https://learn.microsoft.com/en-us/windows/win32/medfound/microsoft-media-foundation-sdk) for playback, based on a small [wrapper .dll](cpp/mfplayer/) that is loaded via ctypes/libffi. It doesn't support subtitles, and the aspect ratio can't be changed (other than turned off).
+This engine uses Microsoft's [Media Foundation](https://learn.microsoft.com/en-us/windows/win32/medfound/microsoft-media-foundation-sdk) for playback, based on a small [wrapper .dll](https://github.com/59de44955ebd/python-mediafoundation/tree/main/dll) that is loaded via ctypes/libffi. It doesn't support subtitles, and the aspect ratio can't be changed (other than turned off).
 
 Since `Media Foundation` can't play MIDI files, an additional minimal DirectShow player that doesn't depend on the DirectShow engine is used to play those.
 

@@ -24,7 +24,7 @@ def init(dll_file):
     _mf.GetDuration.argtypes = (POINTER(MFTIME),)
     #STDAPI GetFrameRate(float *pfRate)
     _mf.GetFrameRate.argtypes = (LPFLOAT,)
-    #STDAPI GetMetadata(BYTE **pData, DWORD *pDataSize)
+    #STDAPI GetMediaInfos(BYTE **pData, DWORD *pDataSize)
     #STDAPI GetMute(BOOL *pbMute)
     #STDAPI GetRate(float *pfRate)
     _mf.GetRate.argtypes = (LPFLOAT,)
