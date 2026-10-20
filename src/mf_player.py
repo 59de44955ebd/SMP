@@ -227,7 +227,6 @@ class Player():
         self._state = STATE_CLOSED
 
         _mf.Init(window.hwnd, window.hwnd)
-        _mf.SetVolume(volume)
 
         ########################################
         #
@@ -238,6 +237,8 @@ class Player():
 
             if event_type == Event.MESessionTopologyStatus:
                 if hr == MF_TOPOSTATUS_READY:
+
+                    _mf.SetVolume(volume)
 
                     d = MFTIME()
                     _mf.GetDuration(byref(d))

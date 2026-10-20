@@ -663,7 +663,7 @@ class App(MainWin):
         self._windowproc_player = WNDPROC(user32.DefWindowProcW)
         newclass = WNDCLASSEXW()
         newclass.lpfnWndProc = self._windowproc_player
-        newclass.style = CS_DBLCLKS  # CS_VREDRAW | CS_HREDRAW #|
+        newclass.style = CS_DBLCLKS  # | CS_VREDRAW | CS_HREDRAW
         newclass.lpszClassName = 'VideoContainer'
         newclass.hbrBackground = gdi32.GetStockObject(BLACK_BRUSH)
         newclass.hCursor = user32.LoadCursorW(None, IDC_ARROW)
