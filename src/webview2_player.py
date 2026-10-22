@@ -40,7 +40,6 @@ class Player(WebView2):
 
         self._has_audio = False
         self._has_video = False
-        self._is_midi = False
 
         self._duration = 0
         self._width = 0
@@ -75,58 +74,58 @@ class Player(WebView2):
         ########################################
         #
         ########################################
-        def _on_dom_content_loaded(webview):
+#        def _on_dom_content_loaded(webview):
 
-            ########################################
-            #
-            ########################################
-            def _on_parsed(ok, width, height, duration, has_audio):
-                if ok:
-                    self._width = width
-                    self._height = height
-                    self._duration = duration or 0
-                    self._has_audio = has_audio
-                    self._has_video = height > 0
-                self.on_parsed(ok)
+        ########################################
+        #
+        ########################################
+        def _on_parsed(ok, width, height, duration, has_audio):
+            if ok:
+                self._width = width
+                self._height = height
+                self._duration = duration or 0
+                self._has_audio = has_audio
+                self._has_video = height > 0
+            self.on_parsed(ok)
 
-            self.expose('on_parsed', _on_parsed)
+        self.expose('on_parsed', _on_parsed)
 
-            ########################################
-            #
-            ########################################
-            def _on_time_update(t):
-                self._time = t
+        ########################################
+        #
+        ########################################
+        def _on_time_update(t):
+            self._time = t
 
-            self.expose('on_time_update', _on_time_update)
+        self.expose('on_time_update', _on_time_update)
 
-            ########################################
-            #
-            ########################################
-            def _on_state_change(is_playing):
-                self._playing = bool(is_playing)
+        ########################################
+        #
+        ########################################
+        def _on_state_change(is_playing):
+            self._playing = bool(is_playing)
 
-            self.expose('on_state_change', _on_state_change)
+        self.expose('on_state_change', _on_state_change)
 
-            ########################################
-            #
-            ########################################
-            def _on_initialized():
-                self._initialized = True
-                hwnd = user32.FindWindowExW(self._parent_hwnd, None, 'Chrome_WidgetWin_0', None)
-                user32.SetWindowLongA(hwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE | WS_DISABLED)
-                self.execute_js(f'player.set_volume({self._volume});')
+        ########################################
+        #
+        ########################################
+        def _on_initialized():
+            self._initialized = True
+            hwnd = user32.FindWindowExW(self._parent_hwnd, None, 'Chrome_WidgetWin_0', None)
+            user32.SetWindowLongA(hwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE | WS_DISABLED)
+            self.execute_js(f'player.set_volume({self._volume});')
 
-                for k, v in self._image_values.items():
-                    if v != 0:
-                        getattr(self, f'set_{k}')(v)
+            for k, v in self._image_values.items():
+                if v != 0:
+                    getattr(self, f'set_{k}')(v)
 
-                if self._media_file:
-                    self._load(self._media_file)
-                    self._media_file = None
+            if self._media_file:
+                self._load(self._media_file)
+                self._media_file = None
 
-            self.expose('on_initialized', _on_initialized)
+        self.expose('on_initialized', _on_initialized)
 
-        self.connect(EVENT.DOM_CONTENT_LOADED, _on_dom_content_loaded)
+#        self.connect(EVENT.DOM_CONTENT_LOADED, _on_dom_content_loaded)
 
     ########################################
     #
@@ -141,7 +140,6 @@ class Player(WebView2):
 
         self._has_audio = False
         self._has_video = False
-        self._is_midi = False
 
         self._duration = 0
         self._width = 0
@@ -156,7 +154,6 @@ class Player(WebView2):
     ########################################
     def _load(self, media_file):
         ext = os.path.splitext(media_file)[1].lower()
-        self._is_midi = ext in ('.mid', '.rmi')
         is_local = '://' not in media_file
         self._sub_files = []
         if is_local:
@@ -169,7 +166,7 @@ class Player(WebView2):
 
             media_file = f"file:///{media_file.replace('\\', '/')}"
 
-        self.execute_js(f'player.load("{media_file}", {int(self._is_midi)});')
+        self.execute_js(f'player.load("{media_file}");')
 
         if self._sub_files:
             self.execute_js(f'player.load_subs("file:///{self._sub_files[0].replace('\\', '/')}");')
@@ -239,12 +236,6 @@ class Player(WebView2):
     ########################################
     def has_audio(self) -> bool:
         return self._has_audio
-
-    ########################################
-    #
-    ########################################
-    def is_midi(self) -> bool:
-        return self._is_midi
 
     ########################################
     #

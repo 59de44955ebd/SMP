@@ -1,75 +1,124 @@
 import os
-
-from dshow_interfaces import *
-from winapp.const import WM_APP
+from ctypes import *
+from ctypes.wintypes import *
 
 from const import RES_DIR
 
-USE_LOCAL_FILTERS = True
-USE_MASTER_VOLUME = False
-USE_BASS_MIDI = True
+winmm = windll.Winmm
 
-if USE_MASTER_VOLUME or not USE_BASS_MIDI:
-    winmm = windll.Winmm
-else:
-    from math import log
+HSOUNDFONT = c_ulong
+HSTREAM = c_ulong
+HPLUGIN = c_ulong
+QWORD = c_int64
 
-WM_EVENT_NOTIFY = WM_APP + 1
+BASS_UNICODE = -2147483648
+BASS_POS_BYTE = 0
 
-FILTER_DIR = None
+# BASS_ChannelIsActive return values
+BASS_ACTIVE_STOPPED = 0
+BASS_ACTIVE_PLAYING = 1
+BASS_ACTIVE_STALLED = 2
+BASS_ACTIVE_PAUSED = 3
 
-def init(filter_dir):
-    global FILTER_DIR
-    FILTER_DIR = filter_dir
+BASS_SAMPLE_LOOP = 4
+
+class BASS_MIDI_FONT(Structure):
+	_fields_ = [('font', HSOUNDFONT),
+				('preset', c_int), # preset number (-1=all)
+				('bank', c_int)
+				]
+
+bass = CDLL(os.path.join(RES_DIR, 'bass.dll'))
+
+#BOOL BASSDEF(BASS_Init)(int device, DWORD freq, DWORD flags, void *win, void *dsguid);
+bass.BASS_Init.argtypes = (INT, DWORD, DWORD, LPVOID, LPVOID)
+
+#HPLUGIN BASSDEF(BASS_PluginLoad)(const char *file, DWORD flags);
+bass.BASS_PluginLoad.argtypes = (LPVOID, DWORD)
+
+#BOOL BASSDEF(BASS_SetVolume)(float volume);
+bass.BASS_SetVolume.argtypes = (FLOAT,)
+
+#float BASSDEF(BASS_GetVolume)();
+bass.BASS_GetVolume.restype = FLOAT
+
+#QWORD BASSDEF(BASS_ChannelGetLength)(DWORD handle, DWORD mode);
+bass.BASS_ChannelGetLength.argtypes = (DWORD, DWORD)
+bass.BASS_ChannelGetLength.restype = QWORD
+
+#QWORD BASSDEF(BASS_ChannelGetPosition)(DWORD handle, DWORD mode);
+bass.BASS_ChannelGetPosition.argtypes = (DWORD, DWORD)
+bass.BASS_ChannelGetPosition.restype = QWORD
+
+#BOOL BASSDEF(BASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode);
+bass.BASS_ChannelSetPosition.argtypes = (DWORD, QWORD, DWORD)
+
+#BOOL BASSDEF(BASS_ChannelPlay)(DWORD handle, BOOL restart);
+bass.BASS_ChannelPlay.argtypes = (DWORD, BOOL)
+
+#BOOL BASSDEF(BASS_ChannelStop)(DWORD handle);
+bass.BASS_ChannelStop.argtypes = (DWORD,)
+
+#BOOL BASSDEF(BASS_ChannelPause)(DWORD handle);
+bass.BASS_ChannelPause.argtypes = (DWORD,)
+
+#DWORD BASS_ChannelIsActive(DWORD handle);
+bass.BASS_ChannelIsActive.argtypes = (DWORD,)
+
+#BOOL BASSDEF(BASS_StreamFree)(HSTREAM handle);
+bass.BASS_StreamFree.argtypes = (HSTREAM,)
+
+#double BASS_ChannelBytes2Seconds(DWORD handle, QWORD pos);
+bass.BASS_ChannelBytes2Seconds.argtypes = (DWORD, QWORD)
+bass.BASS_ChannelBytes2Seconds.restype = DOUBLE
+
+#QWORD BASS_ChannelSeconds2Bytes(DWORD handle, double pos);
+bass.BASS_ChannelSeconds2Bytes.argtypes = (DWORD, DOUBLE)
+bass.BASS_ChannelSeconds2Bytes.restype = QWORD
+
+#DWORD BASS_ChannelFlags(DWORD handle, DWORD flags, DWORD mask);
+bass.BASS_ChannelFlags.argtypes = (DWORD, DWORD, DWORD)
+
+bassmidi_dll = os.path.join(RES_DIR, 'bassmidi.dll')
+bassmidi = CDLL(bassmidi_dll)
+
+#HSTREAM BASSMIDIDEF(BASS_MIDI_StreamCreateFile)(BOOL mem, const void *file, QWORD offset, QWORD length, DWORD flags, DWORD freq);
+bassmidi.BASS_MIDI_StreamCreateFile.argtypes = (BOOL, LPVOID, QWORD, QWORD, DWORD, DWORD)
+bassmidi.BASS_MIDI_StreamCreateFile.restype = HSTREAM
+
+#HSOUNDFONT BASSMIDIDEF(BASS_MIDI_FontInit)(const void *file, DWORD flags);
+bassmidi.BASS_MIDI_FontInit.argtypes = (LPVOID, DWORD)
+bassmidi.BASS_MIDI_FontInit.restype = HSOUNDFONT
+
+#BOOL BASSMIDIDEF(BASS_MIDI_StreamSetFonts)(HSTREAM handle, const BASS_MIDI_FONT *fonts, DWORD count);
+bassmidi.BASS_MIDI_StreamSetFonts.argtypes = (HSTREAM, LPVOID, DWORD)
+bassmidi.BASS_MIDI_StreamSetFonts.restype = BOOL
+
+bass.BASS_PluginLoad(bassmidi_dll, BASS_UNICODE)
 
 
 ########################################
 #
 ########################################
-class Player():
+class MidiPlayer():
 
     ########################################
     #
     ########################################
-    def __init__(
-        self,
-        window: object,
-        volume: float = .75,
-    ):
-        self._window = window
+    def __init__(self, volume: float = .75):
         self._loop = False
+        self._hstream = None
 
-        # Interfaces
-        self._basic_audio = None
-        self._filter_graph = None
-        self._media_control = None
-        self._media_event = None
-        self._media_seeking = None
-
-        self._has_audio = False
-        self._is_midi = False
-        self._duration = 0
-
+        bass.BASS_Init(-1, 44100, 0, 0, 0)
         self.set_volume(volume)
 
-        ########################################
-        #
-        ########################################
-        def _on_WM_EVENT_NOTIFY(hwnd, wparam, lparam):
-            while True:
-                try:
-                    # returns (EventCode, Param1, Param2)
-                    evt = self._media_event.getEvent(0)[0]
-                except:
-                    break
-                if evt == EC_COMPLETE:
-                    if self._loop:
-                        self.set_time(0)
-                    else:
-                        self.pause()
-                        self.set_time(0)
+        self._hsoundfont = bassmidi.BASS_MIDI_FontInit(os.path.join(RES_DIR, 'soundbank.sf2'), BASS_UNICODE)
 
-        window.register_message_callback(WM_EVENT_NOTIFY, _on_WM_EVENT_NOTIFY)
+    ########################################
+    #
+    ########################################
+    def has_audio(self) -> bool:
+        return self._hstream is None
 
     ########################################
     #
@@ -80,129 +129,14 @@ class Player():
     ########################################
     #
     ########################################
-    def has_audio(self) -> bool:
-        return self._has_audio
+    def is_fullscreen(self):
+        return False
 
     ########################################
     #
     ########################################
-    def is_midi(self) -> bool:
-        return self._is_midi
-
-    ########################################
-    #
-    ########################################
-    def _create_object_from_path(self, clsid, dll_filename, interface = IBaseFilter):
-        clsid_class = GUID(clsid)  # bytes(GUID(clsid))
-        iclassfactory = GUID(IClassFactory._iid_)
-        my_dll = oledll.LoadLibrary(dll_filename)
-        factory_ptr = c_void_p(0)
-        hr = my_dll.DllGetClassObject(clsid_class, iclassfactory, byref(factory_ptr))
-        ptr_icf = POINTER(IClassFactory)(factory_ptr.value)
-        pUnk = ptr_icf.CreateInstance()
-        return pUnk.QueryInterface(interface)
-
-    ########################################
-    #
-    ########################################
-    def _query_interfaces(self):
-        self._media_control = self._filter_graph.QueryInterface(IMediaControl)
-        self._media_event = self._filter_graph.QueryInterface(IMediaEventEx)
-        self._media_event.SetNotifyWindow(self._window.hwnd, WM_EVENT_NOTIFY, 0)
-        self._media_seeking = self._filter_graph.QueryInterface(IMediaSeeking)
-        if self._has_audio:
-            self._basic_audio = self._filter_graph.QueryInterface(IBasicAudio)
-
-    ########################################
-    #
-    ########################################
-    def _reset(self):
-        self._basic_audio = None
-        self._media_control = None
-        self._media_event = None
-        self._media_seeking = None
-
-        if self._filter_graph:
-            enum = self._filter_graph.EnumFilters()
-            while True:
-                filt, fetched = enum.Next(1)
-                if not fetched:
-                    break
-                self._filter_graph.RemoveFilter(filt)
-                enum.Reset()
-            self._filter_graph = None
-
-        self._has_audio = False
-        self._is_midi = False
-        self._duration = 0
-
-    ########################################
-    #
-    ########################################
-    def _get_unconnected_pin(self, filt, direction):
-        enum = filt.EnumPins()
-        while True:
-            pin, fetched = enum.Next(1)
-            if not fetched:
-                break
-            d = pin.QueryDirection()
-            if d == direction:
-                try:
-                    tmp = pin.ConnectedTo()
-                    # Already connected - not the pin we want
-                    pin.Release()
-                    continue
-                except:
-                    return pin
-
-    ########################################
-    #
-    ########################################
-    def _build_graph_midi(self, src_file):
-        if USE_BASS_MIDI:
-            if USE_LOCAL_FILTERS:
-                bass_audio_source = self._create_object_from_path(CLSID_BassAudioSource, os.path.join(FILTER_DIR, 'BassAudioSource.ax'))
-            else:
-                bass_audio_source = CreateObject(CLSID_BassAudioSource, interface = IBaseFilter)
-            self._filter_graph.AddFilter(bass_audio_source, 'Base Audio Source')
-            bass_audio_source.QueryInterface(IBassSource2).SetSoundfont(os.path.join(RES_DIR, 'soundbank.sf2'))
-            bass_audio_source.QueryInterface(IFileSourceFilter).Load(src_file, None)
-
-            # Add DirectSound Audio Renderer
-            directsound_audio_renderer = CreateObject(CLSID_DirectSoundAudioRenderer, interface = IBaseFilter)
-            self._filter_graph.AddFilter(directsound_audio_renderer, 'DirectSound Audio Renderer')
-
-            # Connect Audio Decoder and DirectSound Audio Renderer
-            self._filter_graph.ConnectDirect(
-                self._get_unconnected_pin(bass_audio_source, PINDIR_OUTPUT),
-                self._get_unconnected_pin(directsound_audio_renderer, PINDIR_INPUT),
-                None
-            )
-        else:
-            file_source_async = CreateObject(CLSID_FileSourceAsync, interface = IBaseFilter)
-            self._filter_graph.AddFilter(file_source_async, 'FileSourceAsync')
-            file_source_async.QueryInterface(IFileSourceFilter).Load(src_file, None)
-
-            midi_parser = CreateObject(CLSID_MIDIParser, interface = IBaseFilter)
-            self._filter_graph.AddFilter(midi_parser, 'MIDIParser')
-
-            midi_renderer = CreateObject(CLSID_MIDIRenderer, interface = IBaseFilter)
-            self._filter_graph.AddFilter(midi_renderer, 'MIDIRenderer')
-
-            self._filter_graph.ConnectDirect(
-                self._get_unconnected_pin(file_source_async, PINDIR_OUTPUT),
-                self._get_unconnected_pin(midi_parser, PINDIR_INPUT),
-                None
-            )
-
-            self._filter_graph.ConnectDirect(
-                self._get_unconnected_pin(midi_parser, PINDIR_OUTPUT),
-                self._get_unconnected_pin(midi_renderer, PINDIR_INPUT),
-                None
-            )
-
-        self._has_audio = True
-        return True
+    def get_audio_tracks(self) -> list:
+        return [(1, 'MIDI', True)] if self._hstream else []
 
     ########################################
     #
@@ -210,61 +144,66 @@ class Player():
     def load_media_file(self, media_file: str, on_parsed) -> bool:
         self.close_file()
 
-        self._filter_graph = CreateObject(CLSID_FilterGraph, interface=IFilterGraph)
-        self._is_midi = True
-        self._build_graph_midi(media_file)
-        self._query_interfaces()
+        hstream = bassmidi.BASS_MIDI_StreamCreateFile(0, media_file, 0, 0, BASS_UNICODE, 44100)
+        if hstream:
+            self._hstream = hstream
+            self._is_midi = True
 
-        self.set_volume(self._volume)
+            soundfont = BASS_MIDI_FONT(self._hsoundfont, -1, 0)
+            ok = bassmidi.BASS_MIDI_StreamSetFonts(self._hstream, byref(soundfont), 1)
 
-        if self._media_seeking:
-            try:
-                self._duration = self._media_seeking.getDuration()
-            except:
-                pass
+            if self._loop:
+                bass.BASS_ChannelFlags(self._hstream, BASS_SAMPLE_LOOP, BASS_SAMPLE_LOOP)
 
-        on_parsed(True)
+            on_parsed(True)
+        else:
+            on_parsed(False)
 
     ########################################
     #
     ########################################
     def close_file(self):
-        if self._media_control is not None:
-            self._media_control.Stop()
-        self._reset()
+        if self._hstream is not None:
+            bass.BASS_ChannelStop(self._hstream)
+            bass.BASS_StreamFree(self._hstream)
+            self._hstream = None
 
     ########################################
     #
     ########################################
     def pause(self):
-        if self._media_control is None:
+        if self._hstream is None:
             raise Exception('E_NOINTERFACE')
-        self._media_control.Pause()
+
+        ok = bass.BASS_ChannelPause(self._hstream)
 
     ########################################
     #
     ########################################
     def play(self):
-        if self._media_control is None:
+        if self._hstream is None:
             raise Exception('E_NOINTERFACE')
-        self._media_control.Run()
+
+        ok = bass.BASS_ChannelPlay(self._hstream, 0)
 
     ########################################
     #
     ########################################
     def is_playing(self) -> bool:
-        if self._media_control is None:
+        if self._hstream is None:
             return False
-        return self._media_control.getState(10000) == State_Running
+
+        return bass.BASS_ChannelIsActive(self._hstream) == BASS_ACTIVE_PLAYING
 
     ########################################
     #
     ########################################
     def stop(self):
-        if self._media_control is None:
-            return False
-        #self._media_control.Stop()
-        self._media_control.Pause()
+        if self._hstream is None:
+            #raise Exception('E_NOINTERFACE')
+            return
+
+        ok = bass.BASS_ChannelStop(self._hstream)
         self.set_time(0)
 
     ########################################
@@ -277,10 +216,7 @@ class Player():
     #
     ########################################
     def skip_forward(self, secs: float):
-        t = self.get_time() + secs
-        if self._duration:
-            t = min(self._duration / 10000000.0, t)
-        self.set_time(t)
+        self.set_time(self.get_time() + secs)
 
     ########################################
     #
@@ -298,26 +234,31 @@ class Player():
     #
     ########################################
     def get_duration(self) -> float:
-        return self._duration / 10000000.0
+        if self._hstream is None:
+            raise Exception('E_NOINTERFACE')
+
+        total = bass.BASS_ChannelGetLength(self._hstream, BASS_POS_BYTE)
+        return bass.BASS_ChannelBytes2Seconds(self._hstream, total)
 
     ########################################
     #
     ########################################
     def get_time(self) -> float:
-        if self._media_seeking is None:
+        if self._hstream is None:
             raise Exception('E_NOINTERFACE')
-        return self._media_seeking.GetCurrentPosition() / 10000000.0
+
+        pos = bass.BASS_ChannelGetPosition(self._hstream, BASS_POS_BYTE)
+        return bass.BASS_ChannelBytes2Seconds(self._hstream, pos)
 
     ########################################
     #
     ########################################
     def set_time(self, secs: float):
-        if self._media_seeking is None:
+        if self._hstream is None:
             raise Exception('E_NOINTERFACE')
-        self._media_seeking.SetPositions(
-            int(secs * 10000000), AM_SEEKING_AbsolutePositioning,
-            0,AM_SEEKING_NoPositioning
-        )
+
+        pos = bass.BASS_ChannelSeconds2Bytes(self._hstream, secs)
+        ok = bass.BASS_ChannelSetPosition(self._hstream, pos, BASS_POS_BYTE)
 
     ########################################
     # 0..1
@@ -329,21 +270,14 @@ class Player():
     # 0..1
     ########################################
     def set_volume(self, v: float):
-        v = max(0, min(1, v))
         self._volume = v
-        if USE_MASTER_VOLUME or (self._is_midi and not USE_BASS_MIDI):
-            v = int(0xFFFF * v)
-            winmm.waveOutSetVolume(0, v | v << 16)
-        else:
-            if self._has_audio:
-                # 0..1 => -10000..0
-                if self._volume == 0:
-                    self._basic_audio.Volume = -10000
-                else:
-                    self._basic_audio.Volume = int(1442.6950 * log(v))
+        v = int(0xFFFF * v)
+        winmm.waveOutSetVolume(0, v | v << 16)
 
     ########################################
     #
     ########################################
-    def set_loop(self, flag: bool):
-        self._loop = flag
+    def set_loop(self, loop: bool):
+        self._loop = loop
+        if self._hstream:
+            bass.BASS_ChannelFlags(self._hstream, BASS_SAMPLE_LOOP if loop else 0, BASS_SAMPLE_LOOP)

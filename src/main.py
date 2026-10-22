@@ -2,6 +2,7 @@ import json
 import os
 import pymediainfo
 import sys
+import time
 import traceback
 
 import urllib.request
@@ -23,6 +24,11 @@ from const import *
 from myslider import *
 from mystatusbar import *
 from playlist import *
+
+from midi_player import MidiPlayer
+
+winmm = windll.Winmm
+winmm.waveOutSetVolume(0, 0xFFFFFFFF)
 
 try:
     with open(os.path.join(APP_DIR, 'settings.json'), 'r') as f:
@@ -135,6 +141,7 @@ class App(MainWin):
         self.update_counter = 0
         self.is_loop = False
         self.is_mute = False
+        self.is_midi = False
         self.min_tracksize = POINT(394, 0)
         self.media_duration = 0
         self.time_format = ''
@@ -660,6 +667,9 @@ class App(MainWin):
     #
     ########################################
     def create_player(self):
+
+        self.midiplayer = MidiPlayer(volume = self.volume / 100)
+
         self._windowproc_player = WNDPROC(user32.DefWindowProcW)
         newclass = WNDCLASSEXW()
         newclass.lpfnWndProc = self._windowproc_player
@@ -675,7 +685,7 @@ class App(MainWin):
             parent_window = self
         )
 
-        self.mediaplayer = Player(
+        self.player = Player(
             self.video_container,
             volume = self.volume / 100,
         )
@@ -683,8 +693,8 @@ class App(MainWin):
         for k, v in self.color_values.items():
             if v != 100:
                 func = f'set_{k}'
-                if hasattr(self.mediaplayer, func):
-                    getattr(self.mediaplayer, func)((v - 100) / 100)
+                if hasattr(self.player, func):
+                    getattr(self.player, func)((v - 100) / 100)
 
         ########################################
         #
@@ -753,7 +763,7 @@ class App(MainWin):
         #
         ########################################
         def _on_scrub_start():
-            if engine == 'mediafoundation':
+            if engine == 'mediafoundation' and not self.is_midi:
                 self.mediaplayer.scrub_start()
             if self._state == STATE_PLAYING:
                 self.timer_stop()
@@ -764,7 +774,7 @@ class App(MainWin):
         #
         ########################################
         def _on_scrub_stop(pos):
-            if engine == 'mediafoundation':
+            if engine == 'mediafoundation' and not self.is_midi:
                 self.mediaplayer.scrub_stop(self.media_duration * pos)
             if self._state == STATE_PLAYING:
                 self.timer_start()
@@ -1131,6 +1141,7 @@ class App(MainWin):
         self.media_file = None
         self.media_duration = 0
         self.mediaplayer.close_file()
+        self.is_midi = False
         txt = f'{APP_NAME} [{self.engine}]'
         self.set_window_text(txt)
         self.trayicon.set_tooltip(txt)
@@ -1694,20 +1705,29 @@ class App(MainWin):
     ########################################
     #
     ########################################
-    def load_media_file(self, filename, caption=None, callback=None):
+    def load_media_file(self, media_file, caption=None, callback=None):
         if self.media_file is not None:
+            was_midi = self.is_midi
             self.action_close()
-        is_url = '://' in filename
+            if was_midi:
+                time.sleep(.1)
+                winmm.waveOutSetVolume(0, 0xFFFFFFFF)
+
+        is_url = '://' in media_file
         if not is_url:
-            ext = os.path.splitext(filename)[1].lower()
+            ext = os.path.splitext(media_file)[1].lower()
             if ext == '.lnk':
-                filename = get_lnk_infos(filename)[0]
-            elif ext in ('.m3u', '.pls'):
-                self.playlist.load_playlist(filename)
+                media_file = get_lnk_infos(media_file)[0]
+                ext = os.path.splitext(media_file)[1].lower()
+
+            if ext in ('.m3u', '.pls'):
+                self.playlist.load_playlist(media_file)
                 if not self.show_playlist:
                     self.action_toggle_playlist()
                 self.playlist.play_next()
                 return
+            elif ext in ('.mid', '.rmi', '.kar'):
+                self.is_midi = True
 
         ########################################
         #
@@ -1718,8 +1738,8 @@ class App(MainWin):
             if not ok:
                 self.statusbar.set_text('Failed', IDX_STATUSBAR_PART_STATE)
                 return
-            self.media_file = filename
-            txt = f'{caption if caption else os.path.basename(filename)}'
+            self.media_file = media_file
+            txt = f'{caption if caption else os.path.basename(media_file)}'
             self.set_window_text(txt)
             self.trayicon.set_tooltip(txt)
             self.update_counter = 0
@@ -1778,8 +1798,13 @@ class App(MainWin):
                         if enabled:
                             self._active_audio_track_id = track_id
                     user32.EnableMenuItem(user32.GetSubMenu(self.h_menu, IDX_MENU_AUDIO), 0, MF_BYPOSITION | MF_ENABLED)
+
+        self.mediaplayer = self.midiplayer if self.is_midi else self.player
+
+        self.mediaplayer.set_volume(0 if self.is_mute else self.volume / 100)
+
         # Make the callback return immediately (needed for VLC)
-        self.mediaplayer.load_media_file(filename, on_parsed = lambda ok: self.create_timer(lambda: _on_parsed(ok), 0, True))
+        self.mediaplayer.load_media_file(media_file, on_parsed = lambda ok: self.create_timer(lambda: _on_parsed(ok), 0, True))
 
     ########################################
     #

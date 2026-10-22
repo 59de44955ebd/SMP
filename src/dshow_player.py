@@ -1,23 +1,19 @@
 import os
-
+from math import log
 from dshow_interfaces import *
 from winapp.const import WM_SIZE, WM_APP
 
 from const import RES_DIR
 
+# Make BassAudioSource.ax find bass.dll and bassmidi.dll
+os.environ['PATH'] = RES_DIR + os.pathsep + os.environ['PATH']
+
 ADD_DIRECTVOBSUB = True
 USE_LAV_DECODERS = True
 USE_LOCAL_FILTERS = True
-USE_MASTER_VOLUME = False
-USE_BASS_MIDI = True
 USE_MPC_RENDERER = True  # If False, use VMR9 (Windowed) instead
 
 WM_EVENT_NOTIFY = WM_APP + 1
-
-if not USE_MASTER_VOLUME:
-    from math import log
-
-winmm = windll.Winmm
 
 def _DXVA2FloatToFixed(_float_):
     v = int(_float_ * 0x10000)
@@ -73,7 +69,6 @@ class Player():
 
         self._has_video = False
         self._has_audio = False
-        self._is_midi = False
         self._duration = 0
 
         self._fullscreen = False
@@ -130,20 +125,14 @@ class Player():
     ########################################
     #
     ########################################
-    def has_video(self) -> bool:
-        return self._has_video
-
-    ########################################
-    #
-    ########################################
     def has_audio(self) -> bool:
         return self._has_audio
 
     ########################################
     #
     ########################################
-    def is_midi(self) -> bool:
-        return self._is_midi
+    def has_video(self) -> bool:
+        return self._has_video
 
     ########################################
     #
@@ -206,7 +195,6 @@ class Player():
 
         self._has_video = False
         self._has_audio = False
-        self._is_midi = False
         self._duration = 0
 
     ########################################
@@ -221,74 +209,6 @@ class Player():
             pin_info = pin.QueryPinInfo()
             if pin_name in ''.join(map(chr, pin_info.achName)):
                 return pin
-
-    ########################################
-    #
-    ########################################
-    def _get_unconnected_pin(self, filt, direction):
-        enum = filt.EnumPins()
-        while True:
-            pin, fetched = enum.Next(1)
-            if not fetched:
-                break
-            d = pin.QueryDirection()
-            if d == direction:
-                try:
-                    tmp = pin.ConnectedTo()
-                    # Already connected - not the pin we want
-                    pin.Release()
-                    continue
-                except:
-                    return pin
-
-    ########################################
-    #
-    ########################################
-    def _build_graph_midi(self, src_file):
-        if USE_BASS_MIDI:
-            if USE_LOCAL_FILTERS:
-                bass_audio_source = self._create_object_from_path(CLSID_BassAudioSource, os.path.join(FILTER_DIR, 'BassAudioSource.ax'))
-            else:
-                bass_audio_source = CreateObject(CLSID_BassAudioSource, interface = IBaseFilter)
-            self._filter_graph.AddFilter(bass_audio_source, 'Base Audio Source')
-            bass_audio_source.QueryInterface(IBassSource2).SetSoundfont(os.path.join(RES_DIR, 'soundbank.sf2'))
-            bass_audio_source.QueryInterface(IFileSourceFilter).Load(src_file, None)
-
-            # Add DirectSound Audio Renderer
-            directsound_audio_renderer = CreateObject(CLSID_DirectSoundAudioRenderer, interface = IBaseFilter)
-            self._filter_graph.AddFilter(directsound_audio_renderer, 'DirectSound Audio Renderer')
-
-            # Connect Audio Decoder and DirectSound Audio Renderer
-            self._filter_graph.ConnectDirect(
-                self._get_unconnected_pin(bass_audio_source, PINDIR_OUTPUT),
-                self._get_unconnected_pin(directsound_audio_renderer, PINDIR_INPUT),
-                None
-            )
-        else:
-            file_source_async = CreateObject(CLSID_FileSourceAsync, interface = IBaseFilter)
-            self._filter_graph.AddFilter(file_source_async, 'FileSourceAsync')
-            file_source_async.QueryInterface(IFileSourceFilter).Load(src_file, None)
-
-            midi_parser = CreateObject(CLSID_MIDIParser, interface = IBaseFilter)
-            self._filter_graph.AddFilter(midi_parser, 'MIDIParser')
-
-            midi_renderer = CreateObject(CLSID_MIDIRenderer, interface = IBaseFilter)
-            self._filter_graph.AddFilter(midi_renderer, 'MIDIRenderer')
-
-            self._filter_graph.ConnectDirect(
-                self._get_unconnected_pin(file_source_async, PINDIR_OUTPUT),
-                self._get_unconnected_pin(midi_parser, PINDIR_INPUT),
-                None
-            )
-
-            self._filter_graph.ConnectDirect(
-                self._get_unconnected_pin(midi_parser, PINDIR_OUTPUT),
-                self._get_unconnected_pin(midi_renderer, PINDIR_INPUT),
-                None
-            )
-
-        self._has_audio = True
-        return True
 
     ########################################
     #
@@ -502,42 +422,32 @@ class Player():
 
         self._filter_graph = CreateObject(CLSID_FilterGraph, interface=IFilterGraph)
 
-        ext = os.path.splitext(media_file)[1].lower()
-        self._is_midi = ext in ('.mid', '.rmi', '.kar')
+        if not self._build_graph(media_file):
+            self._filter_graph = None
+            return on_parsed(False)
 
-        if self._is_midi:
-            self._build_graph_midi(media_file)
-            self._query_interfaces()
+        self._query_interfaces()
 
+        if self._has_video:
+            self._video_window.Owner = self._window.hwnd
+            if not USE_MPC_RENDERER:
+                self._video_window.WindowStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS
+            self._video_window.MessageDrain = self._window.hwnd
+
+            if USE_MPC_RENDERER:
+                w, h = self._basic_video.GetPreferredAspectRatio()
+                self._ratio_org_mpc = w / h
+                self._ratio_mpc = self._forced_ratio or self._ratio_org_mpc
+            else:
+                self._set_keepaspectratio(self._use_ratio and not self._forced_ratio)
+            self._resize(self._width, self._height)
+
+            for k, value in self._image_values.items():
+                if value != 0:
+                    self._adjust_image(k, value)
+
+        if self._has_audio:
             self.set_volume(self._volume)
-
-        else:
-            if not self._build_graph(media_file):
-                self._filter_graph = None
-                return on_parsed(False)
-
-            self._query_interfaces()
-
-            if self._has_video:
-                self._video_window.Owner = self._window.hwnd
-                if not USE_MPC_RENDERER:
-                    self._video_window.WindowStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS
-                self._video_window.MessageDrain = self._window.hwnd
-
-                if USE_MPC_RENDERER:
-                    w, h = self._basic_video.GetPreferredAspectRatio()
-                    self._ratio_org_mpc = w / h
-                    self._ratio_mpc = self._forced_ratio or self._ratio_org_mpc
-                else:
-                    self._set_keepaspectratio(self._use_ratio and not self._forced_ratio)
-                self._resize(self._width, self._height)
-
-                for k, value in self._image_values.items():
-                    if value != 0:
-                        self._adjust_image(k, value)
-
-            if self._has_audio:
-                self.set_volume(self._volume)
 
         if self._media_seeking:
             try:
@@ -778,10 +688,6 @@ class Player():
     # 0..1
     ########################################
     def get_volume(self) -> float:
-#        if USE_MASTER_VOLUME or self._is_midi:
-#            d = DWORD()
-#            winmm.waveOutGetVolume(0, byref(d))
-#            self._volume = (d.value & 0xFFFF) / 0xFFFF
         return self._volume
 
     ########################################
@@ -790,16 +696,12 @@ class Player():
     def set_volume(self, v: float):
         v = max(0, min(1, v))
         self._volume = v
-        if USE_MASTER_VOLUME or (self._is_midi and not USE_BASS_MIDI):
-            v = int(0xFFFF * v)
-            winmm.waveOutSetVolume(0, v | v << 16)
-        else:
-            if self._has_audio:
-                # 0..1 => -10000..0
-                if self._volume == 0:
-                    self._basic_audio.Volume = -10000
-                else:
-                    self._basic_audio.Volume = int(1442.6950 * log(v))
+        if self._has_audio:
+            # 0..1 => -10000..0
+            if self._volume == 0:
+                self._basic_audio.Volume = -10000
+            else:
+                self._basic_audio.Volume = int(1442.6950 * log(v))
 
     ########################################
     #
@@ -939,8 +841,6 @@ class Player():
     #
     ########################################
     def get_audio_tracks(self) -> list:
-        if self._is_midi:
-            return [(1, 'A: MIDI', True)]
         audio_tracks = []
         if self._stream_select:
             cnt = self._stream_select.Count()

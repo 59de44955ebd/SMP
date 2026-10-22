@@ -55,10 +55,7 @@ video::cue {
 <video preload="auto"></video>
 <script type="module">
 import { fetchTrack, transformSrtTracks, srt2vtt } from './srt.js';
-import { Sequencer, WorkletSynthesizer } from "./spessasynth_lib.js";
 
-let is_midi = false;
-let interval_id = null;
 let media_loaded = false;
 
 const video = document.querySelector('video');
@@ -91,62 +88,12 @@ video.onplay = function(){
 	chrome.webview.api.on_state_change(1);
 }
 
-// Load the sound bank (your path may vary)
-const response = await fetch("soundbank.sf2");
-
-// Load the sound bank into an array buffer
-const sf_data = await response.arrayBuffer();
-
-// Create an audioContext and add the worklet
-const context = new AudioContext();
-
-await context.audioWorklet.addModule("./spessasynth_processor.min.js");
-
-// Create the synthesizer
-const synth = new WorkletSynthesizer(context);
-
-//synth.connect(context.destination);
-
-const gain_node = context.createGain();
-gain_node.connect(context.destination);
-synth.connect(gain_node);
-
-// Add the sound bank
-await synth.soundBankManager.addSoundBank(sf_data, "main");
-
-// Create the sequencer
-const seq = new Sequencer(synth);
-
-gain_node.gain.value = 1;
-
-const timer_start = () => {
-	interval_id = window.setInterval(() => chrome.webview.api.on_time_update(seq.currentTime), 500);
-}
-
-const timer_stop = () => {
-	if (interval_id)
-	{
-		window.clearInterval(interval_id);
-		interval_id = null;
-	}
-}
-
 const player = {};
 
-player.load = (uri, src_is_midi)  => {
-	is_midi = src_is_midi;
-	if (src_is_midi)
-	{
-		fetch(uri)
-		.then(res => res.arrayBuffer())
-		.then(midi_data => seq.loadNewSongList([{ binary: midi_data }]));
-	}
-	else
-	{
-		media_loaded = false;
-		video.onerror = _onerror;
-		video.src = uri;
-	}
+player.load = (uri)  => {
+	media_loaded = false;
+	video.onerror = _onerror;
+	video.src = uri;
 }
 
 player.load_subs = (subs_url) => {
@@ -175,92 +122,36 @@ player.hide_subs = (flag) => {
 }
 
 player.close = ()  => {
-	if (is_midi)
-	{
-		timer_stop();
-		seq.pause();
-		seq.currentTime = 0;
-	}
-	else
-	{
-		video.innerHTML = '';
-		video.src = '';
-	}
+	video.innerHTML = '';
+	video.src = '';
 }
 
 player.play = ()  => {
-	if (is_midi)
-	{
-		seq.play();
-		chrome.webview.api.on_state_change(1);
-		timer_start();
-	}
-	else
-		video.play();
+	video.play();
 }
 
 player.pause = ()  => {
-	if (is_midi)
-	{
-		timer_stop();
-		seq.pause();
-		chrome.webview.api.on_state_change(0);
-	}
-	else
-	{
-		video.pause();
-
-		if (video.duration == 0)
-			video.currentTime = 0;
-	}
+	video.pause();
+	if (video.duration == 0)
+		video.currentTime = 0;
 }
 
 player.stop = ()  => {
-	if (is_midi)
-	{
-		timer_stop();
-		seq.pause();
-		seq.currentTime = 0;
-		chrome.webview.api.on_state_change(0);
-	}
-	else
-	{
-		video.pause();
-		video.currentTime = 0;
-	}
+	video.pause();
+	video.currentTime = 0;
 }
 
 player.set_volume = (v) => {
 	video.volume = v;
-	gain_node.gain.value = v;
 }
 
 player.set_time = (sec) => {
-	if (is_midi)
-	{
-		timer_stop();
-		seq.currentTime = sec;
-		chrome.webview.api.on_time_update(sec);
-		timer_start();
-	}
-	else
-		video.currentTime = sec ;
+	video.currentTime = sec ;
 }
 
 player.set_loop = (flag) => {
 	video.loop = flag;
-	seq.loopCount = flag ? Infinity : 0;
 }
-
-seq.eventHandler.addEvent("songChange", "my-listener", () => {
-    chrome.webview.api.on_parsed(true, 0, 0, seq.duration, true);
-});
-
-seq.eventHandler.addEvent("songEnded", "my-listener", () => {
-	timer_stop();
-	chrome.webview.api.on_state_change(0);
-    chrome.webview.api.on_time_update(0);
-});
 
 player.set_brightness = (value) => {
 	let flt = video.style.filter;
@@ -315,7 +206,6 @@ player.get_video_image = () => {
 
 window.player = player;
 window.video = video;
-window.seq = seq;
 
 chrome.webview.api.on_initialized();
 </script>

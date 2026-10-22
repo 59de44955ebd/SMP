@@ -183,19 +183,6 @@ AUDIO_TYPES = {
     0x0162: 'WMA 3',
 }
 
-# Media Foundation doesn't support MIDI. We use an additional DirectShow player
-# that doesn't depend on external filters (the "engine_directshow" directory)
-# to implement basic MIDI playback without SoundFont support.
-# But in case "engine_directshow" exists, we do use it to play MIDI
-# via SoundFont.
-APP_DIR = os.path.join(os.path.dirname(__file__), '..')
-DIRECTSHOW_PATH = os.path.join(APP_DIR, 'engine_directshow')
-USE_BASS_MIDI = (
-    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'BassAudioSource.ax')) and
-    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'bass.dll')) and
-    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'bassmidi.dll'))
-)
-
 
 ########################################
 #
@@ -212,7 +199,6 @@ class Player():
     ):
         self._window = window
         self._volume = volume
-        self._midi_player = None
 
         self._loop = False
         self._fullscreen = False
@@ -220,7 +206,6 @@ class Player():
         self._frame_step = 0
         self._has_media = False
         self._has_video = False
-        self._is_midi = False
         self._is_track_update = False
         self._scrub_pending = False
         self._scrub_state = SCRUB_NONE
@@ -238,7 +223,7 @@ class Player():
             if event_type == Event.MESessionTopologyStatus:
                 if hr == MF_TOPOSTATUS_READY:
 
-                    _mf.SetVolume(volume)
+                    _mf.SetVolume(self._volume)
 
                     d = MFTIME()
                     _mf.GetDuration(byref(d))
@@ -365,31 +350,8 @@ class Player():
     ########################################
     #
     ########################################
-    def is_midi(self) -> bool:
-        return self._is_midi
-
-    ########################################
-    #
-    ########################################
     def load_media_file(self, media_file: str, on_parsed) -> bool:
         self.close_file()
-
-        ext = os.path.splitext(media_file)[1].lower()
-        if ext in ('.mid', '.rmi', '.kar'):
-            self._is_midi = True
-            self._has_media = True
-            if self._midi_player is None:
-                import midi_player
-                midi_player.USE_BASS_MIDI = USE_BASS_MIDI
-                if USE_BASS_MIDI:
-                    midi_player.init(DIRECTSHOW_PATH)
-                self._midi_player = midi_player.Player(self._window, volume = self._volume)
-                if self._loop:
-                    self._midi_player.set_loop(True)
-            else:
-                self._midi_player.set_volume(self._volume)
-            return self._midi_player.load_media_file(media_file, on_parsed)
-
         self.on_parsed = on_parsed
         return _mf.LoadFile(media_file) == 0
 
@@ -398,15 +360,10 @@ class Player():
     ########################################
     def close_file(self):
         if self._has_media:
-            if self._is_midi:
-                self._midi_player.close_file()
-            else:
-                hr = _mf.CloseFile()
-
+            hr = _mf.CloseFile()
             self._frame_step = 0
             self._has_media = False
             self._has_video = False
-            self._is_midi = False
             self._is_track_update = False
             self._scrub_pending = False
             self._scrub_state = SCRUB_NONE
@@ -416,8 +373,6 @@ class Player():
     #
     ########################################
     def pause(self):
-        if self._is_midi:
-            return self._midi_player.pause()
         hr = _mf.Pause()
         if hr == 0:
             self._state = STATE_PAUSED
@@ -426,8 +381,6 @@ class Player():
     #
     ########################################
     def play(self):
-        if self._is_midi:
-            return self._midi_player.play()
         hr = _mf.Play()
         if hr == 0:
             self._state = STATE_PLAYING
@@ -436,8 +389,6 @@ class Player():
     #
     ########################################
     def stop(self):
-        if self._is_midi:
-            return self._midi_player.stop()
         _mf.SetTime(0)
         _mf.Stop()
         self._state = STATE_STOPPED
@@ -471,8 +422,6 @@ class Player():
     ########################################
     def set_loop(self, flag: bool):
         self._loop = flag
-        if self._midi_player:
-            self._midi_player.set_loop(flag)
 
     ########################################
     #
@@ -511,32 +460,24 @@ class Player():
     #
     ########################################
     def is_playing(self) -> bool:
-        if self._is_midi:
-            return self._midi_player.is_playing()
         return self._state == STATE_PLAYING
 
     ########################################
     #
     ########################################
     def skip_back(self, secs: float):
-        if self._is_midi:
-            return self._midi_player.skip_back(secs)
         self.set_time(max(0, self.get_time() - secs))
 
     ########################################
     #
     ########################################
     def skip_forward(self, secs: float):
-        if self._is_midi:
-            return self._midi_player.skip_forward(secs)
         self.set_time(self.get_time() + secs)
 
     ########################################
     #
     ########################################
     def step_back(self, frames: int = 1):
-        if self._is_midi:
-            return
         if self._frame_step == 0:
             return
         self.set_time(max(0, self.get_time() - frames * self._frame_step))
@@ -545,8 +486,6 @@ class Player():
     #
     ########################################
     def step_forward(self, frames: int = 1):
-        if self._is_midi:
-            return
         if self._frame_step == 0:
             return
         self.set_time(self.get_time() + frames * self._frame_step)
@@ -555,8 +494,6 @@ class Player():
     #
     ########################################
     def get_duration(self) -> float:
-        if self._is_midi:
-            return self._midi_player.get_duration()
         d = MFTIME()
         if _mf.GetDuration(byref(d)) != 0:
             raise PlayerException()
@@ -584,8 +521,6 @@ class Player():
     #
     ########################################
     def get_audio_tracks(self) -> list:
-        if self._is_midi:
-            return [(1, 'MIDI', True)]
         cnt = DWORD()
         if _mf.GetStreamCount(byref(cnt)) != 0:
             raise PlayerException()
@@ -632,8 +567,6 @@ class Player():
     #
     ########################################
     def get_time(self) -> float:
-        if self._is_midi:
-            return self._midi_player.get_time()
         t = MFTIME()
         if _mf.GetTime(byref(t)) != 0:
             raise PlayerException()
@@ -643,9 +576,6 @@ class Player():
     #
     ########################################
     def set_time(self, secs: float):
-        if self._is_midi:
-            return self._midi_player.set_time(secs)
-
         if self._scrub_state == SCRUB_ACTIVE:
             if self._scrub_pending:
                 ########################################
@@ -663,13 +593,8 @@ class Player():
     #
     ########################################
     def scrub_start(self):
-        if self._is_midi:
-            return
-
         self._scrub_state = SCRUB_ACTIVE
-
         self._set_rate(0.0)
-
         if self._state != STATE_PLAYING and self.has_video():
             _mf.SetVolume(0)
 
@@ -677,11 +602,7 @@ class Player():
     #
     ########################################
     def scrub_stop(self, secs: float = None):
-        if self._is_midi:
-            return
-
         self._scrub_state = SCRUB_CLOSING
-
         # Dont't allow to scrub beyond duration, otherwise it gets tricky
         hr = _mf.SetTime(int(min(secs * MF_UNITS_PER_SEC, self._duration - MF_UNITS_PER_SEC / 5)))
 
@@ -722,9 +643,8 @@ class Player():
     def set_volume(self, v: float):
         v = max(0, min(1, v))
         self._volume = v
-        _mf.SetVolume(v)
-        if self._is_midi:
-            self._midi_player.set_volume(v)
+        if self._has_media:
+            hr = _mf.SetVolume(v)
 
     ########################################
     #

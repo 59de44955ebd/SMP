@@ -13,18 +13,6 @@ import mpv
 def init(dll_path):
     mpv.init(dll_path)
 
-# mpv doesn't support MIDI. We use an additional DirectShow player
-# that doesn't depend on external filters (the "engine_directshow" directory)
-# to implement basic MIDI playback without SoundFont support.
-# But in case "engine_directshow" exists, we do use it to play MIDI
-# via SoundFont.
-DIRECTSHOW_PATH = os.path.join(APP_DIR, 'engine_directshow')
-USE_BASS_MIDI = (
-    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'BassAudioSource.ax')) and
-    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'bass.dll')) and
-    os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'bassmidi.dll'))
-)
-
 
 ########################################
 #
@@ -43,14 +31,10 @@ class Player():
         self._fullscreen = False
         self._has_audio = False
         self._has_video = False
-        self._is_midi = False
         self._duration = 0
         self._loop = False
         self._volume = volume
         self._filename = None
-
-        self._midi_player = None
-
         self.hwnd = None
 
         self._player = mpv.MPV()
@@ -65,15 +49,10 @@ class Player():
         if self._filename:
             if self.hwnd:
                 user32.ShowWindow(self.hwnd, SW_HIDE)
-
-            if self._is_midi:
-                self._midi_player.close_file()
-            else:
-                self._player.stop()
+            self._player.stop()
             self._filename = None
             self._has_audio = False
             self._has_video = False
-            self._is_midi = False
             self._duration = 0
 
     ########################################
@@ -81,23 +60,6 @@ class Player():
     ########################################
     def load_media_file(self, media_file: str, on_parsed, **kwargs) -> bool:
         self.close_file()
-
-        ext = os.path.splitext(media_file)[1].lower()
-        if ext in ('.mid', '.rmi', '.kar'):
-            self._is_midi = True
-            self._filename = media_file
-            if self._midi_player is None:
-                import midi_player
-                midi_player.USE_BASS_MIDI = USE_BASS_MIDI
-                if USE_BASS_MIDI:
-                    midi_player.init(DIRECTSHOW_PATH)
-                self._midi_player = midi_player.Player(self._window, volume = self._volume)
-                if self._loop:
-                    self._midi_player.set_loop(True
-            else:
-                self._midi_player.set_volume(self._volume)
-            return self._midi_player.load_media_file(media_file, on_parsed)
-
         self._player.loadfile(media_file)
 
         ########################################
@@ -137,15 +99,13 @@ class Player():
     #
     ########################################
     def get_audio_tracks(self) -> list:
-        if self._is_midi:
-            return [(1, 'MIDI', True)]
         audio_tracks = []
         for row in self._track_list:  # self._player.track_list:
             if row['type'] == 'audio':
                 try:
                     info = f" - {row['metadata']['language']}"
                 except:
-                    pass
+                    info = ''
                 audio_tracks.append([row['id'], f"Track {row['id']}{info} ({row['codec-desc']})", row['selected']])
         return audio_tracks
 
@@ -165,7 +125,7 @@ class Player():
                 try:
                     info = f" - {row['metadata']['language']}"
                 except:
-                    pass
+                    info = ''
                 video_tracks.append([row['id'], f"Track {row['id']}{info} ({row['codec-desc']})", row['selected']])
         return video_tracks
 
@@ -229,39 +189,25 @@ class Player():
     ########################################
     #
     ########################################
-    def is_midi(self) -> bool:
-        return self._is_midi
-
-    ########################################
-    #
-    ########################################
     def pause(self):
-        if self._is_midi:
-            return self._midi_player.pause()
         self._player.pause = True
 
     ########################################
     #
     ########################################
     def play(self):
-        if self._is_midi:
-            return self._midi_player.play()
         self._player.pause = False
 
     ########################################
     #
     ########################################
     def is_playing(self) -> bool:
-        if self._is_midi:
-            return self._midi_player.is_playing()
         return not self._player.pause
 
     ########################################
     #
     ########################################
     def stop(self):
-        if self._is_midi:
-            return self._midi_player.stop()
         self._player.pause = True
         self._player.time_pos = 0
 
@@ -278,8 +224,6 @@ class Player():
     def set_volume(self, v: float):
         self._volume = max(0, min(1, v))
         self._player.volume = int(self._volume * 100)
-        if self._is_midi:
-            self._midi_player.set_volume(v)
 
     ########################################
     #
@@ -287,15 +231,11 @@ class Player():
     def set_loop(self, flag: bool):
         self._loop = flag
         self._player.loop = 'yes' if flag else 'no'
-        if self._midi_player:
-            self._midi_player.set_loop(flag)
 
     ########################################
     #
     ########################################
     def get_duration(self) -> float:
-        if self._is_midi:
-            return self._midi_player.get_duration()
         return self._duration
 
     ########################################
@@ -308,16 +248,12 @@ class Player():
     #
     ########################################
     def get_time(self) -> float:
-        if self._is_midi:
-            return self._midi_player.get_time()
         return self._player.time_pos
 
     ########################################
     #
     ########################################
     def set_time(self, secs: float):
-        if self._is_midi:
-            return self._midi_player.set_time(secs)
         self._player.time_pos = secs
 
     ########################################
@@ -343,8 +279,6 @@ class Player():
     #
     ########################################
     def skip_back(self, secs: float):
-        if self._is_midi:
-            return self._midi_player.skip_back(secs)
         self._player.seek(-secs)
         if self._player.pause:
             time.sleep(.05)
@@ -353,8 +287,6 @@ class Player():
     #
     ########################################
     def skip_forward(self, secs: float):
-        if self._is_midi:
-            return self._midi_player.skip_forward(secs)
         self._player.seek(secs)
         if self._player.pause:
             time.sleep(.05)
@@ -363,8 +295,6 @@ class Player():
     #
     ########################################
     def step_back(self, frames: int =1 ):
-        if self._is_midi:
-            return
         for i in range(frames):
             self._player.frame_back_step()
         if self._player.pause:
@@ -374,8 +304,6 @@ class Player():
     #
     ########################################
     def step_forward(self, frames: int = 1):
-        if self._is_midi:
-            return
         for i in range(frames):
             self._player.frame_step()
         if self._player.pause:

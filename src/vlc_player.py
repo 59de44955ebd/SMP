@@ -2,8 +2,8 @@ import os
 import sys
 import time
 
-from winapp.dlls import *
 from winapp.const import *
+from winapp.dlls import *
 
 from const import *
 
@@ -35,12 +35,11 @@ class Player():
 
         self._has_audio = False
         self._has_video = False
-        self._is_midi = False
         self._duration = 0
         self._loop = False
         self._volume = volume
 
-        options = ["--quiet", "--no-osd", f"--soundfont={os.path.join(RES_DIR, 'soundbank.sf2')}"]
+        options = ["--quiet", "--no-osd"]
         self._vlcInstance = vlc.Instance(options)
 
         self._player = self._vlcInstance.media_player_new()
@@ -107,7 +106,6 @@ class Player():
 
             self._has_audio = False
             self._has_video = False
-            self._is_midi = False
             self._duration = 0
 
     ########################################
@@ -119,9 +117,6 @@ class Player():
         self._media = self._vlcInstance.media_new(media_file)
         self._media.add_option(":avcodec-hw=none")  # Needed for adjusting video on old/bad GPUs
         self._media_event_manager = self._media.event_manager()
-
-        ext = os.path.splitext(media_file)[1].lower()
-        self._is_midi = ext in ('.mid', '.rmi', '.kar')
 
         ########################################
         #
@@ -255,12 +250,6 @@ class Player():
     ########################################
     def has_audio(self) -> bool:
         return self._has_audio
-
-    ########################################
-    #
-    ########################################
-    def is_midi(self) -> bool:
-        return self._is_midi
 
     ########################################
     #

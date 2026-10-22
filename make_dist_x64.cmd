@@ -77,12 +77,10 @@ echo Copying resources...
 echo ****************************************
 copy "src\webview2\native\win-amd64\webview2_loader.dll" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\index.htm" "dist\%APP_NAME%\%DATA_DIR%\"
+copy "resources\bass.dll" "dist\%APP_NAME%\%DATA_DIR%\"
+copy "resources\bassmidi.dll" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\soundbank.sf2" "dist\%APP_NAME%\%DATA_DIR%\"
-copy "resources\spessasynth_core.js" "dist\%APP_NAME%\%DATA_DIR%\"
-copy "resources\spessasynth_lib.js" "dist\%APP_NAME%\%DATA_DIR%\"
-copy "resources\spessasynth_processor.min.js" "dist\%APP_NAME%\%DATA_DIR%\"
 copy "resources\srt.js" "dist\%APP_NAME%\%DATA_DIR%\"
-copy "resources\stb-vorbis.js" "dist\%APP_NAME%\%DATA_DIR%\"
 xcopy /e "engine_mediafoundation" "dist\%APP_NAME%\%DATA_DIR%\engine_mediafoundation\" >nul
 exit /B
 
