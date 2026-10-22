@@ -27,6 +27,8 @@ from playlist import *
 
 from midi_player import MidiPlayer
 
+# Reset the app's master volume to 100%. The actual volume is set
+# below when the engine specific player instance is created.
 winmm = windll.Winmm
 winmm.waveOutSetVolume(0, 0xFFFFFFFF)
 
@@ -48,11 +50,11 @@ if APP_SETTINGS.get('single_instance', False):
         user32.SetForegroundWindow(hwnd)
         sys.exit(0)
 
-engine = APP_SETTINGS.get('engine', 'webview')
+engine_name = APP_SETTINGS.get('engine', 'webview')
 engine_dir = None
 
-if not os.path.isdir(os.path.join(APP_DIR, f'engine_{engine}')):
-    if engine == 'vlc':
+if not os.path.isdir(os.path.join(APP_DIR, f'engine_{engine_name}')):
+    if engine_name == 'vlc':
         has_vlc = False
         hkey = HKEY()
         if advapi32.RegOpenKeyW(HKEY_LOCAL_MACHINE, 'Software\\VideoLAN\\VLC', byref(hkey)) == ERROR_SUCCESS:
@@ -65,20 +67,20 @@ if not os.path.isdir(os.path.join(APP_DIR, f'engine_{engine}')):
         if has_vlc:
             engine_dir = vlc_dir
         else:
-            engine = 'webview'
+            engine_name = 'webview'
     else:
-        engine = 'webview'
+        engine_name = 'webview'
 
 if engine_dir is None:
-    engine_dir = os.path.join(APP_DIR, f'engine_{engine}')
+    engine_dir = os.path.join(APP_DIR, f'engine_{engine_name}')
 
-if engine == 'directshow':
+if engine_name == 'directshow':
     import dshow_player as _player
-elif engine == 'mediafoundation':
+elif engine_name == 'mediafoundation':
     import mf_player as _player
-elif engine == 'mpv':
+elif engine_name == 'mpv':
     import mpv_player as _player
-elif engine == 'vlc':
+elif engine_name == 'vlc':
     import vlc_player as _player
 else:
     import webview2_player as _player
@@ -115,7 +117,7 @@ class App(MainWin):
         self.theme = APP_SETTINGS.get('theme', THEME_DARK)
         self.use_meta_title = APP_SETTINGS.get('use_meta_title', False)
         self.volume = APP_SETTINGS.get('volume', 75)
-        self.engine = engine
+        self.engine = engine_name
         left, top, width, height = APP_SETTINGS.get('rect', (CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT))
         splitter_pos = APP_SETTINGS.get('splitter_pos', 200)
         last_playlist = APP_SETTINGS.get('last_playlist', None)
@@ -288,7 +290,7 @@ class App(MainWin):
             user32.InsertMenuW(h_menu_video, 0, MF_BYPOSITION | MF_POPUP, self.h_menu_video_tracks, 'Video &Track')
             user32.InsertMenuW(h_menu_video, 1, MF_BYPOSITION | MF_SEPARATOR, self.h_menu_video_tracks, '')
 
-        if engine == 'mediafoundation':
+        if self.engine == 'mediafoundation':
             user32.RemoveMenu(self.h_menu, IDX_MENU_SUB, MF_BYPOSITION)
             for idm in range(IDM_RATIO_4_3, IDM_RATIO_185_100 + 1):
                 user32.EnableMenuItem(self.h_menu, idm, MF_BYCOMMAND | MF_GRAYED)
@@ -758,7 +760,7 @@ class App(MainWin):
         #
         ########################################
         def _on_scrub_start():
-            if engine == 'mediafoundation' and not self.is_midi:
+            if self.engine == 'mediafoundation' and not self.is_midi:
                 self.mediaplayer.scrub_start()
             if self._state == STATE_PLAYING:
                 self.timer_stop()
@@ -769,7 +771,7 @@ class App(MainWin):
         #
         ########################################
         def _on_scrub_stop(pos):
-            if engine == 'mediafoundation' and not self.is_midi:
+            if self.engine == 'mediafoundation' and not self.is_midi:
                 self.mediaplayer.scrub_stop(self.media_duration * pos)
             if self._state == STATE_PLAYING:
                 self.timer_start()

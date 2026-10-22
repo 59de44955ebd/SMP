@@ -100,13 +100,13 @@ class Player():
     ########################################
     def get_audio_tracks(self) -> list:
         audio_tracks = []
-        for row in self._track_list:  # self._player.track_list:
+        for row in self._track_list:
             if row['type'] == 'audio':
                 try:
                     info = f" - {row['metadata']['language']}"
                 except:
                     info = ''
-                audio_tracks.append([row['id'], f"Track {row['id']}{info} ({row['codec-desc']})", row['selected']])
+                audio_tracks.append([row['id'], f"Track {row['id']}{info} ({row['codec']})", row['selected']])
         return audio_tracks
 
     ########################################
@@ -120,13 +120,13 @@ class Player():
     ########################################
     def get_video_tracks(self) -> list:
         video_tracks = []
-        for row in self._track_list:  # self._player.track_list:
+        for row in self._track_list:
             if row['type'] == 'video':
                 try:
                     info = f" - {row['metadata']['language']}"
                 except:
                     info = ''
-                video_tracks.append([row['id'], f"Track {row['id']}{info} ({row['codec-desc']})", row['selected']])
+                video_tracks.append([row['id'], f"Track {row['id']}{info} ({row['codec']})", row['selected']])
         return video_tracks
 
     ########################################
@@ -143,7 +143,8 @@ class Player():
         subs_tracks = []
         for row in self._player.track_list:
             if row['type'] == 'sub':
-                subs_tracks.append([row['id'], f"Track {row['id']} - {row['title']} ({row['codec']})", row['selected']])
+                info = f" - {row['title']}" if 'title' in row else ''
+                subs_tracks.append([row['id'], f"Track {row['id']}{info} ({row['codec']})", row['selected']])
         return subs_tracks
 
     ########################################
