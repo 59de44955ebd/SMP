@@ -1,22 +1,19 @@
 import json
-import os
-import sys
-from sysconfig import get_platform
 import time
-
-TRUE = 1
-FALSE = 0
 
 from .interfaces import *
 from .handlers import *
 
-if getattr(sys, 'frozen', False):
-    loader_dll = os.path.join(os.path.dirname(__file__), 'webview2_loader.dll')
-else:
-    loader_dll = os.path.join(os.path.dirname(__file__), 'native', get_platform(), 'webview2_loader.dll')
+TRUE = 1
+FALSE = 0
 
-LOADER = CDLL(loader_dll)
-LOADER.CreateEnvironmentWithOptions.argtypes = (LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR, BOOL, POINTER(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler))
+LOADER = None
+
+def webview2_init(loader_dll):
+    global LOADER
+    LOADER = CDLL(loader_dll)
+    LOADER.CreateEnvironmentWithOptions.argtypes = (LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR, BOOL, POINTER(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler))
+
 
 class SETTINGS:
     # https://peter.sh/experiments/chromium-command-line-switches/

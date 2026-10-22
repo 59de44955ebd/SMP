@@ -15,6 +15,13 @@ SETTINGS.DEFAULT_CONTEXT_MENUS_ENABLED = False
 if IS_FROZEN:
     SETTINGS.USER_DATA_FOLDER = os.path.join(APP_DIR, 'profile')
 
+WEBVIEW_DIR = None
+
+def init(web_dir):
+    global WEBVIEW_DIR
+    WEBVIEW_DIR = web_dir
+    webview2_init(os.path.join(WEBVIEW_DIR, 'webview2_loader.dll'))
+
 
 ########################################
 #
@@ -58,7 +65,7 @@ class Player(WebView2):
 
         super().__init__(
             parent_hwnd = window.hwnd,
-            url = 'file:///' + os.path.join(RES_DIR, 'index.htm').replace('\\', '/'),
+            url = 'file:///' + os.path.join(WEBVIEW_DIR, 'index.htm').replace('\\', '/'),
             is_hidden = True,
         )
 
@@ -70,11 +77,6 @@ class Player(WebView2):
             self.put_bounds(RECT(0, 0, width, height))
 
         window.register_message_callback(WM_SIZE, _on_WM_SIZE)
-
-        ########################################
-        #
-        ########################################
-#        def _on_dom_content_loaded(webview):
 
         ########################################
         #
@@ -124,8 +126,6 @@ class Player(WebView2):
                 self._media_file = None
 
         self.expose('on_initialized', _on_initialized)
-
-#        self.connect(EVENT.DOM_CONTENT_LOADED, _on_dom_content_loaded)
 
     ########################################
     #

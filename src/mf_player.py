@@ -9,9 +9,9 @@ SIZE_T = c_longlong
 
 _mf = None
 
-def init(dll_file):
+def init(dll_dir):
     global _mf
-    _mf = CDLL(dll_file)
+    _mf = CDLL(os.path.join(dll_dir, 'mfplayer.dll'))
     #STDAPI Init(HWND hVideo, HWND hEvent)
     _mf.Init.argtypes = (HWND, HWND)
     #STDAPI CloseFile()

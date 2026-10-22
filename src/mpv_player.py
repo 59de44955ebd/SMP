@@ -10,8 +10,8 @@ from const import *
 
 import mpv
 
-def init(dll_path):
-    mpv.init(dll_path)
+def init(dll_dir):
+    mpv.init(os.path.join(dll_dir, 'libmpv-2.dll'))
 
 
 ########################################

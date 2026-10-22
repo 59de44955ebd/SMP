@@ -48,59 +48,43 @@ if APP_SETTINGS.get('single_instance', False):
         user32.SetForegroundWindow(hwnd)
         sys.exit(0)
 
-DIRECTSHOW_PATH = os.path.join(APP_DIR, 'engine_directshow')
-HAS_DIRECTSHOW = os.path.isfile(os.path.join(DIRECTSHOW_PATH, 'LAVSplitter.ax'))
-
-VLC_PATH = os.path.join(APP_DIR, 'engine_vlc')
-HAS_VLC = os.path.isfile(os.path.join(VLC_PATH, 'libvlc.dll'))
-if not HAS_VLC:
-    hkey = HKEY()
-    if advapi32.RegOpenKeyW(HKEY_LOCAL_MACHINE, 'Software\\VideoLAN\\VLC', byref(hkey)) == ERROR_SUCCESS:
-        data_str = (BYTE * MAX_PATH)()
-        cbdata_str = DWORD(sizeof(data_str))
-        if advapi32.RegQueryValueExW(hkey, 'InstallDir', None, None, data_str, byref(cbdata_str)) == ERROR_SUCCESS:
-            VLC_PATH = cast(data_str, LPWSTR).value
-            HAS_VLC = os.path.isfile(os.path.join(VLC_PATH, 'libvlc.dll'))
-        advapi32.RegCloseKey(hkey)
-
-MF_PATH = os.path.join(APP_DIR, 'engine_mediafoundation', 'mfplayer.dll')
-HAS_MF = os.path.isfile(MF_PATH)
-
-MPV_PATH = os.path.join(APP_DIR, 'engine_mpv', 'libmpv-2.dll')
-HAS_MPV = os.path.isfile(MPV_PATH)
-
 engine = APP_SETTINGS.get('engine', 'webview')
+engine_dir = None
 
-if (
-    (engine == 'directshow' and not HAS_DIRECTSHOW) or
-    (engine == 'mediafoundation' and not HAS_MF) or
-    (engine == 'mpv' and not HAS_MPV) or
-    (engine == 'vlc' and not HAS_VLC)
-):
-    engine = 'webview'
+if not os.path.isdir(os.path.join(APP_DIR, f'engine_{engine}')):
+    if engine == 'vlc':
+        has_vlc = False
+        hkey = HKEY()
+        if advapi32.RegOpenKeyW(HKEY_LOCAL_MACHINE, 'Software\\VideoLAN\\VLC', byref(hkey)) == ERROR_SUCCESS:
+            data_str = (BYTE * MAX_PATH)()
+            cbdata_str = DWORD(sizeof(data_str))
+            if advapi32.RegQueryValueExW(hkey, 'InstallDir', None, None, data_str, byref(cbdata_str)) == ERROR_SUCCESS:
+                vlc_dir = cast(data_str, LPWSTR).value
+                has_vlc = os.path.isfile(os.path.join(vlc_dir, 'libvlc.dll'))
+            advapi32.RegCloseKey(hkey)
+        if has_vlc:
+            engine_dir = vlc_dir
+        else:
+            engine = 'webview'
+    else:
+        engine = 'webview'
+
+if engine_dir is None:
+    engine_dir = os.path.join(APP_DIR, f'engine_{engine}')
 
 if engine == 'directshow':
-    import dshow_player
-    dshow_player.init(DIRECTSHOW_PATH)
-    Player = dshow_player.Player
-
+    import dshow_player as _player
 elif engine == 'mediafoundation':
-    import mf_player
-    mf_player.init(MF_PATH)
-    Player = mf_player.Player
-
+    import mf_player as _player
 elif engine == 'mpv':
-    import mpv_player
-    mpv_player.init(MPV_PATH)
-    Player = mpv_player.Player
-
+    import mpv_player as _player
 elif engine == 'vlc':
-    import vlc_player
-    vlc_player.init(VLC_PATH)
-    Player = vlc_player.Player
-
+    import vlc_player as _player
 else:
-    from webview2_player import *
+    import webview2_player as _player
+
+_player.init(engine_dir)
+Player = _player.Player
 
 if IS_FROZEN:
     HMOD_RESOURCES = kernel32.GetModuleHandleW(None)
@@ -118,7 +102,6 @@ class App(MainWin):
     def __init__(self):
         self.auto_resize_to_video = APP_SETTINGS.get('auto_resize_to_video', True)
         self.color_values = APP_SETTINGS.get('color_values', {k: 100 for k in COLOR_KEYS})
-#        self.fullscreen_dblclk = APP_SETTINGS.get('fullscreen_dblclk', True)
         self.minimize_to_tray = APP_SETTINGS.get('minimize_to_tray', False)
         self.remember_playlist = APP_SETTINGS.get('remember_playlist', False)
         self.show_controls = APP_SETTINGS.get('show_controls', True)
@@ -549,6 +532,10 @@ class App(MainWin):
     #
     ########################################
     def action_set_engine(self, idm):
+
+        engine_name = ENGINES[idm]
+        engine_dir = os.path.join(APP_DIR, f'engine_{engine_name}')
+
         ########################################
         #
         ########################################
@@ -559,16 +546,23 @@ class App(MainWin):
             else:
                 command = 'main.py' + (f' "{self.media_file}"' if self.media_file else '')
                 cwd = os.path.dirname(os.path.realpath(__file__))
-            self.engine = ENGINES[idm]
+            self.engine = engine_name
             user32.SendMessageW(self.hwnd, WM_CLOSE, 0, 0)
             shell32.ShellExecuteW(None, None, sys.executable, command, cwd, SW_SHOWNORMAL)
 
-        if (
-            (idm == IDM_ENGINE_DIRECTSHOW and not HAS_DIRECTSHOW) or
-            (idm == IDM_ENGINE_MEDIAFOUNDATION and not HAS_MF) or
-            (idm == IDM_ENGINE_MPV and not HAS_MPV) or
-            (idm == IDM_ENGINE_VLC and not HAS_VLC)
-        ):
+        has_engine = os.path.isdir(engine_dir)
+        if not has_engine and engine_name == 'vlc':
+            hkey = HKEY()
+            if advapi32.RegOpenKeyW(HKEY_LOCAL_MACHINE, 'Software\\VideoLAN\\VLC', byref(hkey)) == ERROR_SUCCESS:
+                data_str = (BYTE * MAX_PATH)()
+                cbdata_str = DWORD(sizeof(data_str))
+                if advapi32.RegQueryValueExW(hkey, 'InstallDir', None, None, data_str, byref(cbdata_str)) == ERROR_SUCCESS:
+                    if os.path.isfile(os.path.join(cast(data_str, LPWSTR).value, 'libvlc.dll')):
+                        has_engine = True
+                advapi32.RegCloseKey(hkey)
+
+        if not has_engine:
+
             ########################################
             #
             ########################################
@@ -589,8 +583,7 @@ class App(MainWin):
                             user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), 'Please be patient...')
                             user32.EnableWindow(user32.GetDlgItem(hwnd, IDOK), FALSE)
                             user32.EnableWindow(user32.GetDlgItem(hwnd, IDCANCEL), FALSE)
-                            engine_name = ENGINES[idm]
-                            engine_dir = os.path.join(APP_DIR, f'engine_{engine_name}')
+
                             ok = self.download_engine(engine_name)
                             if not ok or not os.path.isdir(engine_dir):
                                 user32.SetWindowTextW(user32.GetDlgItem(hwnd, IDC_DL_STATIC), 'Server not found.\n\nPlease check your internet connection or try again later.')
@@ -695,6 +688,8 @@ class App(MainWin):
                 func = f'set_{k}'
                 if hasattr(self.player, func):
                     getattr(self.player, func)((v - 100) / 100)
+
+        self.mediaplayer = self.player
 
         ########################################
         #
