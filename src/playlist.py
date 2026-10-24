@@ -168,11 +168,10 @@ class PlayList(ListBox):
             elif idm == IDM_PLAYLIST_EXPORT:
                 playlist_file = show_save_file_dialog(self, 'Export Playlist', '.m3u', 'M3U Files (*.m3u)\0*.m3u\0PLS Files (*.pls)\0*.pls\0\0', 'playlist')
                 if playlist_file:
-                    playlist = list(self.playlist_items.values())  # TODO: order!
                     if playlist_file.lower().endswith('.pls'):
-                        playlist = save_pls(playlist_file, playlist)
+                        playlist = save_pls(playlist_file, self.playlist_items)
                     else:
-                        playlist = save_m3u(playlist_file, playlist)
+                        playlist = save_m3u(playlist_file, self.playlist_items)
 
             elif idm == IDM_PLAYLIST_SHUFFLE:
                 self.send_message(WM_SETREDRAW, FALSE, 0)

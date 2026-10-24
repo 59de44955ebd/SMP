@@ -424,7 +424,10 @@ class App(MainWin):
             self.set_stayontop(True)
 
         if len(sys.argv) > 1:
-            media_files = sys.argv[1:]
+            if sys.argv[1] == '-':
+                media_files = [sys.stdin.read().rstrip()]
+            else:
+                media_files = sys.argv[1:]
             self.create_timer(lambda: self.load_media_file(media_files[0]) or self.playlist.add_files(media_files), 0, True)
 
         elif last_playlist and self.remember_playlist:
@@ -1736,9 +1739,11 @@ class App(MainWin):
                 self.statusbar.set_text('Failed', IDX_STATUSBAR_PART_STATE)
                 return
             self.media_file = media_file
-            txt = f'{caption if caption else os.path.basename(media_file)}'
+
+            txt = f'{caption if caption else os.path.basename(media_file)}'[:128]
             self.set_window_text(txt)
             self.trayicon.set_tooltip(txt)
+
             self.update_counter = 0
             self.media_duration = self.mediaplayer.get_duration()
             self.update_time_format()
