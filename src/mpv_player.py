@@ -40,7 +40,8 @@ class Player():
         self._player = mpv.MPV()
         self._player.wid = window.hwnd
         self._player.volume = int(volume * 100)
-        self._player.keep_open = 'yes'  # causes END_FILE never triggered
+        self._player.keep_open = 'yes'  # Causes END_FILE never triggered
+        self._player.tls_verify = 'no'  # Otherwise HTTPS URLs don't work
 
     ########################################
     #
@@ -50,6 +51,7 @@ class Player():
             if self.hwnd:
                 user32.ShowWindow(self.hwnd, SW_HIDE)
             self._player.stop()
+            self._player.wait_for_playback()
             self._filename = None
             self._has_audio = False
             self._has_video = False
