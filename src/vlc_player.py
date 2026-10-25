@@ -11,6 +11,7 @@ import vlc
 
 TIMER_ID_END_REACHED = 1
 TIMER_ID_PLAYING = 2
+TIMER_ID_ON_PARSED = 3
 
 def init(vlc_path):
     vlc.init(vlc_path)
@@ -65,6 +66,14 @@ class Player():
             elif wparam == TIMER_ID_PLAYING:
                 self._player.audio_set_volume(int(self._volume * 100))
 
+            elif wparam == TIMER_ID_ON_PARSED:
+                it = self._media.tracks_get()
+                if it:
+                    self._handle_on_parsed(it)
+                    self._on_parsed(True)
+                else:
+                    self._on_parsed(False)
+
         self._window.register_message_callback(WM_TIMER, _on_WM_TIMER)
 
     ########################################
@@ -74,7 +83,20 @@ class Player():
         self._player.stop()
         if self._loop:
             self._player.play()
+
+        # Re-attach
         self._media_event_manager.event_attach(vlc.EventType.MediaStateChanged, self._on_state_changed)
+
+    ########################################
+    #
+    ########################################
+    def _handle_on_parsed(self, it):
+        for info in it:
+            if info.type == vlc.TrackType.audio:
+                self._has_audio = True
+            elif info.type == vlc.TrackType.video:
+                self._has_video = True
+        self._duration = self._media.get_duration() / 1000
 
     ########################################
     #
@@ -118,22 +140,19 @@ class Player():
         self._media.add_option(":avcodec-hw=none")  # Needed for adjusting video on old/bad GPUs
         self._media_event_manager = self._media.event_manager()
 
+        self._on_parsed = on_parsed
+
         ########################################
         #
         ########################################
         def _on_parsed(e):
             it = self._media.tracks_get()
             if it:
-                ok = True
-                for info in it:
-                    if info.type == vlc.TrackType.audio:
-                        self._has_audio = True
-                    elif info.type == vlc.TrackType.video:
-                        self._has_video = True
-                self._duration = self._media.get_duration() / 1000
+                self._handle_on_parsed(it)
+                self._on_parsed(True)
             else:
-                ok = False
-            on_parsed(ok)
+                # Try again a little later
+                user32.SetTimer(self._window.hwnd, TIMER_ID_ON_PARSED, 500, 0)
 
         self._media_event_manager.event_attach(vlc.EventType.MediaParsedChanged, _on_parsed)
         self._media_event_manager.event_attach(vlc.EventType.MediaStateChanged, self._on_state_changed)
