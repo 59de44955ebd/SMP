@@ -1856,10 +1856,11 @@ class App(MainWin):
         for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_SKIP_BACK, IDM_SKIP_FORWARD):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, FALSE)
         for idm in (
-            IDM_PLAY_PAUSE, IDM_STOP, IDM_CLOSE, IDM_SNAPSHOT, IDM_SHOW_MEDIAINFOS,
+            IDM_PLAY_PAUSE, IDM_STOP, IDM_CLOSE, IDM_OPEN_LOCATION, IDM_SHOW_MEDIAINFOS,
             IDM_SKIP_BACK, IDM_SKIP_FORWARD, IDM_STEP_BACK, IDM_STEP_FORWARD, IDM_REWIND,
-            IDM_FULLSCREEN, IDM_LOAD_SUBS, IDM_OPEN_LOCATION, IDM_SHOW_MEDIAINFOS,
-            IDM_ZOOM_50, IDM_ZOOM_100, IDM_ZOOM_200
+            IDM_ZOOM_50, IDM_ZOOM_100, IDM_ZOOM_200, IDM_SNAPSHOT,
+            IDM_LOAD_SUBS,
+            IDM_FULLSCREEN,
         ):
             user32.EnableMenuItem(self.h_menu, idm, MF_BYCOMMAND | MF_GRAYED)
         taskbar.SetProgressState(self.hwnd, TBPF.NOPROGRESS)
@@ -1891,8 +1892,9 @@ class App(MainWin):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, TRUE)
         for idm in (IDM_SKIP_BACK, IDM_SKIP_FORWARD):
             self.toolbar.send_message(TB_ENABLEBUTTON, idm, int(has_duration))
+
         state = MF_BYCOMMAND | MF_ENABLED
-        for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_CLOSE, IDM_SHOW_MEDIAINFOS):
+        for idm in (IDM_PLAY_PAUSE, IDM_STOP, IDM_CLOSE):
             user32.EnableMenuItem(self.h_menu, idm, state)
 
         state = MF_BYCOMMAND | (MF_ENABLED if has_video else MF_GRAYED)
@@ -1902,8 +1904,11 @@ class App(MainWin):
         state = MF_BYCOMMAND | (MF_ENABLED if has_duration else MF_GRAYED)
         for idm in (IDM_SKIP_BACK, IDM_SKIP_FORWARD, IDM_STEP_BACK, IDM_STEP_FORWARD, IDM_REWIND):
             user32.EnableMenuItem(self.h_menu, idm, state)
+
         state = MF_BYCOMMAND | (MF_ENABLED if not is_url else MF_GRAYED)
         user32.EnableMenuItem(self.h_menu, IDM_OPEN_LOCATION, state)
+        user32.EnableMenuItem(self.h_menu, IDM_SHOW_MEDIAINFOS, state)
+
         state = MF_BYCOMMAND | (MF_ENABLED if has_video and not is_url else MF_GRAYED)
         user32.EnableMenuItem(self.h_menu, IDM_LOAD_SUBS, state)
 

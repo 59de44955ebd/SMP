@@ -41,9 +41,9 @@ PINDIR_INPUT = 0
 PINDIR_OUTPUT = 1
 _PinDirection = c_int # enum
 
-FORMAT_VideoInfo = '{05589f80-c356-11ce-bf01-00aa0055595a}'
-FORMAT_VideoInfo2 = '{F72A76A0-EB0A-11d0-ACE4-0000C0CC16BA}'
-FORMAT_MPEGVideo = '{05589f82-c356-11ce-bf01-00aa0055595a}'
+FORMAT_VideoInfo = '{05589F80-C356-11CE-BF01-00AA0055595A}'
+FORMAT_VideoInfo2 = '{F72A76A0-EB0A-11D0-ACE4-0000C0CC16BA}'
+FORMAT_MPEGVideo = '{05589F82-C356-11CE-BF01-00AA0055595A}'
 FORMAT_MPEG2_VIDEO = '{E06D80E3-DB46-11CF-B4D1-00805F6CBBEA}'
 
 MEDIATYPE_Video = '{73646976-0000-0010-8000-00AA00389B71}'
@@ -65,33 +65,35 @@ ProcAmp_Saturation = 0x8
 
 # Windows
 CLSID_DirectSoundAudioRenderer  = '{79376820-07D0-11CF-A24D-0020AFD79767}'
-CLSID_FileSourceAsync		    = '{E436EBB5-524F-11CE-9F53-0020AF0BA770}'
-CLSID_FilterGraph			    = '{E436EBB3-524F-11CE-9F53-0020AF0BA770}'
-CLSID_MIDIParser			    = '{D51BD5A2-7548-11CF-A520-0080C77EF58A}'
-CLSID_MIDIRenderer			    = '{07B65360-C445-11CE-AFDE-00AA006C14F4}'
-CLSID_MsDTVDVDAudioDecoder	    = '{E1F1A0B8-BEEE-490D-BA7C-066C40B5E2B9}'
-CLSID_MsDTVDVDVideoDecoder	    = '{212690FB-83E5-4526-8FD7-74478B7939CD}'
-CLSID_VideoMixingRenderer9	    = '{51B4ABF3-748F-4E3B-A276-C828330E926A}'
+CLSID_FileSourceAsync            = '{E436EBB5-524F-11CE-9F53-0020AF0BA770}'
+CLSID_FilterGraph                = '{E436EBB3-524F-11CE-9F53-0020AF0BA770}'
+CLSID_MIDIParser                = '{D51BD5A2-7548-11CF-A520-0080C77EF58A}'
+CLSID_MIDIRenderer                = '{07B65360-C445-11CE-AFDE-00AA006C14F4}'
+CLSID_MsDTVDVDAudioDecoder        = '{E1F1A0B8-BEEE-490D-BA7C-066C40B5E2B9}'
+CLSID_MsDTVDVDVideoDecoder        = '{212690FB-83E5-4526-8FD7-74478B7939CD}'
+CLSID_VideoMixingRenderer9        = '{51B4ABF3-748F-4E3B-A276-C828330E926A}'
 CLSID_MR_VIDEO_MIXER_SERVICE    = '{073cd2fc-6cf4-40b7-8859-e89552c841f8}'
 
+CLSID_FileSourceURL                = '{E436EBB6-524F-11CE-9F53-0020AF0BA770}'
+
 # LAV filters
-CLSID_LAVSplitterSource		    = '{B98D13E7-55DB-4385-A33D-09FD1BA26338}'
-CLSID_LAVSplitter		        = '{171252A0-8820-4AFE-9DF8-5C92B2D66B04}'
-CLSID_LAVVideoDecoder		    = '{EE30215D-164F-4A92-A4EB-9D4C13390F9F}'
-CLSID_LAVAudioDecoder		    = '{E8E73B6B-4CB3-44A4-BE99-4F7BCB96E491}'
+CLSID_LAVSplitterSource            = '{B98D13E7-55DB-4385-A33D-09FD1BA26338}'
+CLSID_LAVSplitter                = '{171252A0-8820-4AFE-9DF8-5C92B2D66B04}'
+CLSID_LAVVideoDecoder            = '{EE30215D-164F-4A92-A4EB-9D4C13390F9F}'
+CLSID_LAVAudioDecoder            = '{E8E73B6B-4CB3-44A4-BE99-4F7BCB96E491}'
 
 # VSFilter/DirectVobSub/DirectVobSubXy
-CLSID_VSFilter				    = '{93A22E7A-5091-45EF-BA61-6DA26156A5D0}'
-CLSID_VSFilter_autoload		    = '{9852A670-F845-491B-9BE6-EBD841B8A613}'
+CLSID_VSFilter                    = '{93A22E7A-5091-45EF-BA61-6DA26156A5D0}'
+CLSID_VSFilter_autoload            = '{9852A670-F845-491B-9BE6-EBD841B8A613}'
 
 # MPC Video Renderer
-CLSID_MPCVideoRenderer	        = '{71F080AA-8661-4093-B15E-4F6903E77D0A}'
+CLSID_MPCVideoRenderer            = '{71F080AA-8661-4093-B15E-4F6903E77D0A}'
 
 # Bass Audio Source
 CLSID_BassAudioSource           = '{A351970E-4601-4BEC-93DE-CEE7AF64C636}'
 
-CLSID_MIDIParser			    = '{D51BD5A2-7548-11CF-A520-0080C77EF58A}'
-CLSID_MIDIRenderer			    = '{07B65360-C445-11CE-AFDE-00AA006C14F4}'
+CLSID_MIDIParser                = '{D51BD5A2-7548-11CF-A520-0080C77EF58A}'
+CLSID_MIDIRenderer                = '{07B65360-C445-11CE-AFDE-00AA006C14F4}'
 
 # IMediaEvent constants
 #EC_ACTIVATE = 19
@@ -197,14 +199,14 @@ class IBindCtx(IUnknown):
     _idlflags_ = []
 
 #class ID3DFullscreenControl(IUnknown):
-#	_case_insensitive_ = True
-#	_iid_ = GUID('{8EA1E899-B77D-4777-9F0E-66421BEA50F8}')
-#	_idlflags_ = []
+#    _case_insensitive_ = True
+#    _iid_ = GUID('{8EA1E899-B77D-4777-9F0E-66421BEA50F8}')
+#    _idlflags_ = []
 
 class IDirectVobSub(IUnknown):
-	_case_insensitive_ = True
-	_iid_ = GUID('{EBE1FB08-3957-47CA-AF13-5827E5442E56}')
-	_idlflags_ = []
+    _case_insensitive_ = True
+    _iid_ = GUID('{EBE1FB08-3957-47CA-AF13-5827E5442E56}')
+    _idlflags_ = []
 
 class IEnumFilters(IUnknown):
     _case_insensitive_ = True
@@ -356,9 +358,9 @@ class IVMRAspectRatioControl(IUnknown):
     _idlflags_ = []
 
 class IVMRAspectRatioControl9(IUnknown):
-	_case_insensitive_ = True
-	_iid_ = GUID('{00D96C29-BBDE-4EFC-9901-BB5036392146}')
-	_idlflags_ = []
+    _case_insensitive_ = True
+    _iid_ = GUID('{00D96C29-BBDE-4EFC-9901-BB5036392146}')
+    _idlflags_ = []
 
 class IVMRFilterConfig(IUnknown):
     _case_insensitive_ = True
@@ -367,9 +369,9 @@ class IVMRFilterConfig(IUnknown):
     _idlflags_ = []
 
 class IVMRFilterConfig9(IUnknown):
-	_case_insensitive_ = False
-	_iid_ = GUID('{5a804648-4f66-4867-9c43-4f5c822cf1b8}')
-	_idlflags_ = []
+    _case_insensitive_ = False
+    _iid_ = GUID('{5a804648-4f66-4867-9c43-4f5c822cf1b8}')
+    _idlflags_ = []
 
 class IVMRImageCompositor(IUnknown):
     _case_insensitive_ = True
@@ -378,46 +380,66 @@ class IVMRImageCompositor(IUnknown):
     _idlflags_ = []
 
 class IVMRMixerControl9(IUnknown):
-	_case_insensitive_ = True
-	_iid_ = GUID('{1A777EAA-47C8-4930-B2C9-8FEE1C1B0F3B}')
-	_idlflags_ = []
+    _case_insensitive_ = True
+    _iid_ = GUID('{1A777EAA-47C8-4930-B2C9-8FEE1C1B0F3B}')
+    _idlflags_ = []
 
 class IVMRWindowlessControl9(IUnknown):
-	_case_insensitive_ = False
-	_iid_ = GUID('{8f537d09-f85e-4414-b23b-502e54c79927}')
-	_idlflags_ = []
+    _case_insensitive_ = False
+    _iid_ = GUID('{8f537d09-f85e-4414-b23b-502e54c79927}')
+    _idlflags_ = []
 
 ########################################
 # STRUCTS
 ########################################
-REFERENCE_TIME = c_longlong
+REFERENCE_TIME = c_longlong  # 8 bytes
 
-class _AMMediaType(Structure):
+#typedef struct _AMMediaType {
+#  GUID     majortype;
+#  GUID     subtype;
+#  BOOL     bFixedSizeSamples;
+#  BOOL     bTemporalCompression;
+#  ULONG    lSampleSize;
+#  GUID     formattype;
+#  IUnknown *pUnk;
+#  ULONG    cbFormat;
+#  BYTE     *pbFormat;
+#} AM_MEDIA_TYPE;
+
+
+#pbFormat
+#
+#Pointer to the format block. The structure type is specified by the formattype member. The format structure must be present, unless formattype is GUID_NULL or FORMAT_None.
+#
+#The pbFormat buffer must be allocated by calling CoTaskMemAlloc. To release the format block, call FreeMediaType.
+
+class AM_MEDIA_TYPE(Structure):
+    _pack_ = 2
     _fields_ = [
         ('majortype', GUID),
         ('subtype', GUID),
-        ('bFixedSizeSamples', c_int),
-        ('bTemporalCompression', c_int),
-        ('lSampleSize', c_ulong),
+        ('bFixedSizeSamples', BOOL),
+        ('bTemporalCompression', BOOL),
+        ('lSampleSize', ULONG),
         ('formattype', GUID),
         ('punk', POINTER(IUnknown)),
-        ('cbFormat', c_ulong),
-        ('pbFormat', POINTER(c_ubyte)),
+        ('cbFormat', ULONG),
+        ('pbFormat', POINTER(BYTE)),
     ]
 
 class BITMAPINFOHEADER(Structure):
     _fields_ = [
-            ('biSize', DWORD),
-            ('biWidth', LONG),
-            ('biHeight', LONG),
-            ('biPlanes', WORD),
-            ('biBitCount', WORD),
-            ('biCompression', DWORD),
-            ('biSizeImage', DWORD),
-            ('biXPelsPerMeter', LONG),
-            ('biYPelsPerMeter', LONG),
-            ('biClrUsed', DWORD),
-            ('biClrImportant', DWORD)
+        ('biSize', DWORD),
+        ('biWidth', LONG),
+        ('biHeight', LONG),
+        ('biPlanes', WORD),
+        ('biBitCount', WORD),
+        ('biCompression', DWORD),
+        ('biSizeImage', DWORD),
+        ('biXPelsPerMeter', LONG),
+        ('biYPelsPerMeter', LONG),
+        ('biClrUsed', DWORD),
+        ('biClrImportant', DWORD)
     ]
 
 # Custom struct for writing BMP files
@@ -448,76 +470,103 @@ class _PinInfo(Structure):
     ]
 
 class VIDEOINFOHEADER(Structure):
-	_fields_ = (
-		('rcSource', RECT),
-		('rcTarget', RECT),
-		('dwBitRate', DWORD),
-		('dwBitErrorRate', DWORD),
-		('AvgTimePerFrame', REFERENCE_TIME),
-	)
+    _fields_ = (
+        ('rcSource', RECT),
+        ('rcTarget', RECT),
+        ('dwBitRate', DWORD),
+        ('dwBitErrorRate', DWORD),
+        ('AvgTimePerFrame', REFERENCE_TIME),
+        ('bmiHeader', BITMAPINFOHEADER),
+    )
 
 class VIDEOINFOHEADER2(Structure):
-	_fields_ = (
-		('rcSource', RECT),
-		('rcTarget', RECT),
-		('dwBitRate', DWORD),
-		('dwBitErrorRate', DWORD),
-		('AvgTimePerFrame', REFERENCE_TIME),
-	)
+    _fields_ = (
+        ('rcSource', RECT),
+        ('rcTarget', RECT),
+        ('dwBitRate', DWORD),
+        ('dwBitErrorRate', DWORD),
+        ('AvgTimePerFrame', REFERENCE_TIME),
+        ('dwInterlaceFlags', DWORD),
+        ('dwCopyProtectFlags', DWORD),
+        ('dwPictAspectRatioX', DWORD),
+        ('dwPictAspectRatioY', DWORD),
+        ('dwReserved1', DWORD),
+        ('dwReserved2', DWORD),
+        ('bmiHeader', BITMAPINFOHEADER),
+    )
+
+class MPEG1VIDEOINFO(Structure):
+    _fields_ = (
+        ('hdr', VIDEOINFOHEADER),
+        ('dwStartTimeCode', DWORD),
+        ('cbSequenceHeader', DWORD),
+        ('bSequenceHeader', LPBYTE),
+    )
+
+class MPEG2VIDEOINFO(Structure):
+    _fields_ = (
+        ('hdr', VIDEOINFOHEADER2),
+        ('dwStartTimeCode', DWORD),
+        ('cbSequenceHeader', DWORD),
+        ('dwProfile', DWORD),
+        ('dwLevel', DWORD),
+        ('dwFlags', DWORD),
+        ('dwSequenceHeader', DWORD),
+    )
 
 class VMR9NormalizedRect(Structure):
-	_fields_ = (
-		('left', FLOAT),
-		('top', FLOAT),
-		('right', FLOAT),
-		('bottom', FLOAT)
-	)
+    _fields_ = (
+        ('left', FLOAT),
+        ('top', FLOAT),
+        ('right', FLOAT),
+        ('bottom', FLOAT)
+    )
 
 class VMR9ProcAmpControl(Structure):
-	_fields_ = (
-		('dwSize', DWORD),
-		('dwFlags', DWORD),
-		('Brightness', FLOAT),
-		('Contrast', FLOAT),
-		('Hue', FLOAT),
-		('Saturation', FLOAT)
-	)
-	def __init__(self):
-		self.dwSize = sizeof(VMR9ProcAmpControl)
+    _fields_ = (
+        ('dwSize', DWORD),
+        ('dwFlags', DWORD),
+        ('Brightness', FLOAT),
+        ('Contrast', FLOAT),
+        ('Hue', FLOAT),
+        ('Saturation', FLOAT)
+    )
+    def __init__(self):
+        self.dwSize = sizeof(VMR9ProcAmpControl)
 
 class VMR9ProcAmpControlRange(Structure):
-	_fields_ = (
-		('dwSize', DWORD),
-		('dwProperty', DWORD),
-		('MinValue', FLOAT),
-		('MaxValue', FLOAT),
-		('DefaultValue', FLOAT),
-		('StepSize', FLOAT)
-	)
-	def __init__(self):
-		self.dwSize = sizeof(self)
+    _fields_ = (
+        ('dwSize', DWORD),
+        ('dwProperty', DWORD),
+        ('MinValue', FLOAT),
+        ('MaxValue', FLOAT),
+        ('DefaultValue', FLOAT),
+        ('StepSize', FLOAT)
+    )
+    def __init__(self):
+        self.dwSize = sizeof(self)
 
 class DXVA2_Fixed32(Structure):
-	_fields_ = (
-		('Fraction', USHORT),
-		('Value', SHORT),
-	)
+    _fields_ = (
+        ('Fraction', USHORT),
+        ('Value', SHORT),
+    )
 
 class DXVA2_ValueRange(Structure):
-	_fields_ = (
-		('MinValue', DXVA2_Fixed32),
-		('MaxValue', DXVA2_Fixed32),
-		('DefaultValue', DXVA2_Fixed32),
-		('StepSize', DXVA2_Fixed32)
-	)
+    _fields_ = (
+        ('MinValue', DXVA2_Fixed32),
+        ('MaxValue', DXVA2_Fixed32),
+        ('DefaultValue', DXVA2_Fixed32),
+        ('StepSize', DXVA2_Fixed32)
+    )
 
 class DXVA2_ProcAmpValues(Structure):
-	_fields_ = (
-		('Brightness', DXVA2_Fixed32),
-		('Contrast', DXVA2_Fixed32),
-		('Hue', DXVA2_Fixed32),
-		('Saturation', DXVA2_Fixed32)
-	)
+    _fields_ = (
+        ('Brightness', DXVA2_Fixed32),
+        ('Contrast', DXVA2_Fixed32),
+        ('Hue', DXVA2_Fixed32),
+        ('Saturation', DXVA2_Fixed32)
+    )
 
 class DDCOLORKEY(Structure):
     _fields_ = [
@@ -575,15 +624,15 @@ IPersistStream._methods_ = [
 
 IAMStreamConfig._methods_ = [
     COMMETHOD([], HRESULT, 'SetFormat',
-              ( ['in'], POINTER(_AMMediaType), 'pmt' )),
+              ( ['in'], POINTER(AM_MEDIA_TYPE), 'pmt' )),
     COMMETHOD([], HRESULT, 'GetFormat',
-              ( ['out'], POINTER(POINTER(_AMMediaType)), 'ppmt' )),
+              ( ['out'], POINTER(POINTER(AM_MEDIA_TYPE)), 'ppmt' )),
     COMMETHOD([], HRESULT, 'GetNumberOfCapabilities',
               ( ['out'], POINTER(c_int), 'piCount' ),
               ( ['out'], POINTER(c_int), 'piSize' )),
     COMMETHOD([], HRESULT, 'GetStreamCaps',
               ( ['in'], c_int, 'iIndex' ),
-              ( ['out'], POINTER(POINTER(_AMMediaType)), 'ppmt' ),
+              ( ['out'], POINTER(POINTER(AM_MEDIA_TYPE)), 'ppmt' ),
               ( ['out'], POINTER(c_ubyte), 'pSCC' )),
 ]
 
@@ -592,7 +641,7 @@ IAMStreamSelect._methods_ = [
               ( ['out'], POINTER(c_ulong), 'pcStreams' )),
     COMMETHOD([], HRESULT, 'Info',
               ( ['in'], c_int, 'lIndex' ),
-              ( ['out'], POINTER(POINTER(_AMMediaType)), 'ppmt' ),
+              ( ['out'], POINTER(POINTER(AM_MEDIA_TYPE)), 'ppmt' ),
               ( ['out'], POINTER(c_ulong), 'pdwFlags' ),
               ( ['out'], POINTER(c_ulong), 'plcid' ),
               ( ['out'], POINTER(DWORD), 'pdwGroup' ),
@@ -741,30 +790,30 @@ IBindCtx._methods_ = [
 ]
 
 #ID3DFullscreenControl._methods_ = [
-#	COMMETHOD([], HRESULT, 'SetD3DFullscreen',
-#			(['in'], BOOL, 'fEnabled')),
-#	COMMETHOD([], HRESULT, 'GetD3DFullscreen',
-#			(['in'], LPBOOL, 'pfEnabled'))
+#    COMMETHOD([], HRESULT, 'SetD3DFullscreen',
+#            (['in'], BOOL, 'fEnabled')),
+#    COMMETHOD([], HRESULT, 'GetD3DFullscreen',
+#            (['in'], LPBOOL, 'pfEnabled'))
 #]
 
 IDirectVobSub._methods_ = [
-	COMMETHOD([], HRESULT, 'get_FileName',
-			(['in'], POINTER(BSTR), 'fn')),
-	COMMETHOD([], HRESULT, 'put_FileName',
-			(['in'], BSTR, 'fn')),
-	COMMETHOD([], HRESULT, 'get_LanguageCount',
-			(['retval', 'out'], POINTER(INT), 'nLangs')),
-	COMMETHOD([], HRESULT, 'get_LanguageName',
-			(['in'], BSTR, 'iLanguage'),
-			(['retval', 'out'], POINTER(POINTER(BSTR)), 'ppName')),
-	COMMETHOD([], HRESULT, 'get_SelectedLanguage',
-			(['retval', 'out'], POINTER(INT), 'iSelected')),
-	COMMETHOD([], HRESULT, 'put_SelectedLanguage',
-			(['in'], INT, 'iSelected')),
-	COMMETHOD([], HRESULT, 'get_HideSubtitles',
-			(['retval', 'out'], POINTER(BOOL), 'fHideSubtitles')),
-	COMMETHOD([], HRESULT, 'put_HideSubtitles',
-			(['in'], BOOL, 'fHideSubtitles')),
+    COMMETHOD([], HRESULT, 'get_FileName',
+            (['in'], POINTER(BSTR), 'fn')),
+    COMMETHOD([], HRESULT, 'put_FileName',
+            (['in'], BSTR, 'fn')),
+    COMMETHOD([], HRESULT, 'get_LanguageCount',
+            (['retval', 'out'], POINTER(INT), 'nLangs')),
+    COMMETHOD([], HRESULT, 'get_LanguageName',
+            (['in'], BSTR, 'iLanguage'),
+            (['retval', 'out'], POINTER(POINTER(BSTR)), 'ppName')),
+    COMMETHOD([], HRESULT, 'get_SelectedLanguage',
+            (['retval', 'out'], POINTER(INT), 'iSelected')),
+    COMMETHOD([], HRESULT, 'put_SelectedLanguage',
+            (['in'], INT, 'iSelected')),
+    COMMETHOD([], HRESULT, 'get_HideSubtitles',
+            (['retval', 'out'], POINTER(BOOL), 'fHideSubtitles')),
+    COMMETHOD([], HRESULT, 'put_HideSubtitles',
+            (['in'], BOOL, 'fHideSubtitles')),
 ]
 
 IEnumFilters._methods_ = [
@@ -817,11 +866,11 @@ IEnumString._methods_ = [
 
 IFileSourceFilter._methods_ = [
     COMMETHOD([], HRESULT, 'Load',
-              ( ['in'], c_wchar_p, 'pszFileName' ),
-              ( ['in'], POINTER(_AMMediaType), 'pmt' )),
+              ( ['in'], LPCOLESTR, 'pszFileName' ),
+              ( ['in'], POINTER(AM_MEDIA_TYPE), 'pmt' )),
     COMMETHOD([], HRESULT, 'GetCurFile',
               ( ['out'], POINTER(c_wchar_p), 'ppszFileName' ),
-              ( ['out'], POINTER(_AMMediaType), 'pmt' )),
+              ( ['out'], POINTER(AM_MEDIA_TYPE), 'pmt' )),
 ]
 
 IFilterGraph._methods_ = [
@@ -838,7 +887,7 @@ IFilterGraph._methods_ = [
     COMMETHOD([], HRESULT, 'ConnectDirect',
               ( ['in'], POINTER(IPin), 'ppinOut' ),
               ( ['in'], POINTER(IPin), 'ppinIn' ),
-              ( ['in'], POINTER(_AMMediaType), 'pmt' )),
+              ( ['in'], POINTER(AM_MEDIA_TYPE), 'pmt' )),
     COMMETHOD([], HRESULT, 'Reconnect',
               ( ['in'], POINTER(IPin), 'pPin' )),
     COMMETHOD([], HRESULT, 'Disconnect',
@@ -1012,12 +1061,12 @@ IPin._methods_ = [
               ( ['in'], c_ulong, 'pmt' )),
     COMMETHOD([], HRESULT, 'ReceiveConnection',
               ( ['in'], POINTER(IPin), 'pConnector' ),
-              ( ['in'], POINTER(_AMMediaType), 'pmt' )),
+              ( ['in'], POINTER(AM_MEDIA_TYPE), 'pmt' )),
     COMMETHOD([], HRESULT, 'Disconnect'),
     COMMETHOD([], HRESULT, 'ConnectedTo',
               ( ['out', 'retval'], POINTER(POINTER(IPin)), 'pPin' )),
     COMMETHOD([], HRESULT, 'ConnectionMediaType',
-              ( ['out'], POINTER(_AMMediaType), 'pmt' )),
+              ( ['out'], POINTER(AM_MEDIA_TYPE), 'pmt' )),
     COMMETHOD([], HRESULT, 'QueryPinInfo',
               ( ['out', 'retval'], POINTER(_PinInfo), 'pInfo' )),
     COMMETHOD([], HRESULT, 'QueryDirection',
@@ -1025,7 +1074,7 @@ IPin._methods_ = [
     COMMETHOD([], HRESULT, 'QueryId',
               ( ['out', 'retval'], POINTER(c_wchar_p), 'Id' )),
     COMMETHOD([], HRESULT, 'QueryAccept',
-              ( ['in'], POINTER(_AMMediaType), 'pmt' )),
+              ( ['in'], POINTER(AM_MEDIA_TYPE), 'pmt' )),
     COMMETHOD([], HRESULT, 'EnumMediaTypes',
               ( ['out', 'retval'], POINTER(POINTER(IEnumMediaTypes)), 'ppenum' )),
     COMMETHOD([], HRESULT, 'QueryInternalConnections',
@@ -1211,10 +1260,10 @@ IVMRAspectRatioControl._methods_ = [
 ]
 
 IVMRAspectRatioControl9._methods_ = [
-	COMMETHOD([], HRESULT, 'GetAspectRatioMode',
-			(['retval', 'out'], POINTER(DWORD), 'lpdwARMode')),
-	COMMETHOD([], HRESULT, 'SetAspectRatioMode',
-			(['in'], DWORD, 'dwARMode')),
+    COMMETHOD([], HRESULT, 'GetAspectRatioMode',
+            (['retval', 'out'], POINTER(DWORD), 'lpdwARMode')),
+    COMMETHOD([], HRESULT, 'SetAspectRatioMode',
+            (['in'], DWORD, 'dwARMode')),
 ]
 
 IVMRFilterConfig._methods_ = [
@@ -1261,12 +1310,12 @@ IVMRImageCompositor._methods_ = [
               ( ['in'], POINTER(c_ulong), 'pddsRenderTarget' )),
     COMMETHOD([], HRESULT, 'SetStreamMediaType',
               ( ['in'], c_ulong, 'dwStrmID' ),
-              ( ['in'], POINTER(_AMMediaType), 'pmt' ),
+              ( ['in'], POINTER(AM_MEDIA_TYPE), 'pmt' ),
               ( ['in'], c_int, 'fTexture' )),
     COMMETHOD([], HRESULT, 'CompositeImage',
               ( ['in'], POINTER(IUnknown), 'pD3DDevice' ),
               ( ['in'], POINTER(c_ulong), 'pddsRenderTarget' ),
-              ( ['in'], POINTER(_AMMediaType), 'pmtRenderTarget' ),
+              ( ['in'], POINTER(AM_MEDIA_TYPE), 'pmtRenderTarget' ),
               ( ['in'], c_longlong, 'rtStart' ),
               ( ['in'], c_longlong, 'rtEnd' ),
               ( ['in'], c_ulong, 'dwClrBkGnd' ),
@@ -1275,41 +1324,41 @@ IVMRImageCompositor._methods_ = [
 ]
 
 IVMRMixerControl9._methods_ = [
-	COMMETHOD([], HRESULT, 'SetAlpha',
-			(['in'], DWORD, 'dwStreamID'),
-			(['in'], FLOAT, 'Alpha')),
-	COMMETHOD([], HRESULT, 'GetAlpha',
-			(['in'], DWORD, 'dwStreamID'),
-			(['out'], POINTER(FLOAT), 'pAlpha')),
-	COMMETHOD([], HRESULT, 'SetZOrder',
-			(['in'], DWORD, 'dwStreamID'),
-			(['in'], DWORD, 'dwZ')),
-	COMMETHOD([], HRESULT, 'GetZOrder',
-			(['in'], DWORD, 'dwStreamID'),
-			(['out'], POINTER(DWORD), 'pZ')),
-	COMMETHOD([], HRESULT, 'SetOutputRect',
-			(['in'], DWORD, 'dwStreamID'),
-			(['in'], POINTER(VMR9NormalizedRect), 'pRect')),
-	COMMETHOD([], HRESULT, 'GetOutputRect',
-			(['in'], DWORD, 'dwStreamID'),
-			(['in'], POINTER(VMR9NormalizedRect), 'pRect')),
-	COMMETHOD([], HRESULT, 'SetBackgroundClr',
-			(['in'], COLORREF, 'ClrBkg')),
-	COMMETHOD([], HRESULT, 'GetBackgroundClr',
-			(['in'], POINTER(COLORREF), 'lpClrBkg')),
-	COMMETHOD([], HRESULT, 'SetMixingPrefs',
-			(['in'], DWORD, 'dwMixerPrefs')),
-	COMMETHOD([], HRESULT, 'GetMixingPrefs',
-			(['out'], POINTER(DWORD), 'pdwMixerPrefs')),
-	COMMETHOD([], HRESULT, 'SetProcAmpControl',
-			(['in'], DWORD, 'dwStreamID'),
-			(['in'], POINTER(VMR9ProcAmpControl), 'lpClrControl')),
-	COMMETHOD([], HRESULT, 'GetProcAmpControl',
-			(['in'], DWORD, 'dwStreamID'),
-			(['in', 'out'], POINTER(VMR9ProcAmpControl), 'lpClrControl')),
-	COMMETHOD([], HRESULT, 'GetProcAmpControlRange',
-			(['in'], DWORD, 'dwStreamID'),
-			(['in', 'out'], POINTER(VMR9ProcAmpControlRange), 'lpClrControl'))
+    COMMETHOD([], HRESULT, 'SetAlpha',
+            (['in'], DWORD, 'dwStreamID'),
+            (['in'], FLOAT, 'Alpha')),
+    COMMETHOD([], HRESULT, 'GetAlpha',
+            (['in'], DWORD, 'dwStreamID'),
+            (['out'], POINTER(FLOAT), 'pAlpha')),
+    COMMETHOD([], HRESULT, 'SetZOrder',
+            (['in'], DWORD, 'dwStreamID'),
+            (['in'], DWORD, 'dwZ')),
+    COMMETHOD([], HRESULT, 'GetZOrder',
+            (['in'], DWORD, 'dwStreamID'),
+            (['out'], POINTER(DWORD), 'pZ')),
+    COMMETHOD([], HRESULT, 'SetOutputRect',
+            (['in'], DWORD, 'dwStreamID'),
+            (['in'], POINTER(VMR9NormalizedRect), 'pRect')),
+    COMMETHOD([], HRESULT, 'GetOutputRect',
+            (['in'], DWORD, 'dwStreamID'),
+            (['in'], POINTER(VMR9NormalizedRect), 'pRect')),
+    COMMETHOD([], HRESULT, 'SetBackgroundClr',
+            (['in'], COLORREF, 'ClrBkg')),
+    COMMETHOD([], HRESULT, 'GetBackgroundClr',
+            (['in'], POINTER(COLORREF), 'lpClrBkg')),
+    COMMETHOD([], HRESULT, 'SetMixingPrefs',
+            (['in'], DWORD, 'dwMixerPrefs')),
+    COMMETHOD([], HRESULT, 'GetMixingPrefs',
+            (['out'], POINTER(DWORD), 'pdwMixerPrefs')),
+    COMMETHOD([], HRESULT, 'SetProcAmpControl',
+            (['in'], DWORD, 'dwStreamID'),
+            (['in'], POINTER(VMR9ProcAmpControl), 'lpClrControl')),
+    COMMETHOD([], HRESULT, 'GetProcAmpControl',
+            (['in'], DWORD, 'dwStreamID'),
+            (['in', 'out'], POINTER(VMR9ProcAmpControl), 'lpClrControl')),
+    COMMETHOD([], HRESULT, 'GetProcAmpControlRange',
+            (['in'], DWORD, 'dwStreamID'),
+            (['in', 'out'], POINTER(VMR9ProcAmpControlRange), 'lpClrControl'))
 ]
 
 IVMRWindowlessControl9._methods_ = [

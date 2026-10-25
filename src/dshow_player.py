@@ -11,7 +11,7 @@ os.environ['PATH'] = RES_DIR + os.pathsep + os.environ['PATH']
 ADD_DIRECTVOBSUB = True
 USE_LAV_DECODERS = True
 USE_LOCAL_FILTERS = True
-USE_MPC_RENDERER = True  # If False, use VMR9 (Windowed) instead
+USE_MPC_RENDERER = False  # If False, use VMR9 (Windowed) instead
 
 WM_EVENT_NOTIFY = WM_APP + 1
 
@@ -160,6 +160,12 @@ class Player():
             self._basic_video = self._filter_graph.QueryInterface(IBasicVideo2)
             self._video_window = self._filter_graph.QueryInterface(IVideoWindow)
 
+            # Only works with VMR
+            try:
+                self._frame_step = int(self._basic_video.AvgTimePerFrame * 10000000)
+            except:
+                self._frame_step = 1000000
+
         if self._has_audio:
             self._basic_audio = self._filter_graph.QueryInterface(IBasicAudio)
 
@@ -229,7 +235,8 @@ class Player():
         lav_splitter_source_src = lav_splitter_source.QueryInterface(IFileSourceFilter)
         try:
             lav_splitter_source_src.Load(src_file, None)
-        except:
+        except Exception as e:
+            print(e)
             return False
 
         # Default to 100 ms
@@ -324,17 +331,6 @@ class Player():
                 else:
                     pin_in_video_renderer = self._get_pin_by_name(video_renderer, 'VMR Input0')
                 self._filter_graph.ConnectDirect(pin_out_video_decoder, pin_in_video_renderer, None)
-
-            # get framerate
-            pmt = pin_out_src_video.ConnectionMediaType()
-            formattype = str(pmt.formattype)
-            if formattype == FORMAT_VideoInfo2 or formattype == FORMAT_MPEG2_VIDEO:
-                vh = cast(pmt.pbFormat, POINTER(VIDEOINFOHEADER2))
-                self._frame_step = vh.contents.AvgTimePerFrame
-
-            elif formattype == FORMAT_VideoInfo or formattype == FORMAT_MPEGVideo:
-                vh = cast(pmt.pbFormat, POINTER(VIDEOINFOHEADER))
-                self._frame_step = vh.contents.AvgTimePerFrame
 
             if USE_MPC_RENDERER:
                 serv = video_renderer.QueryInterface(IMFGetService)
