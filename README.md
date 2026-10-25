@@ -18,7 +18,9 @@ Filters are loaded directly from .dll and therefor don't need to be registered i
 
 ### 2. mediafoundation
 
-This engine uses Microsoft's [Media Foundation](https://learn.microsoft.com/en-us/windows/win32/medfound/microsoft-media-foundation-sdk) for playback, based on a small [wrapper .dll](https://github.com/59de44955ebd/python-mediafoundation/tree/main/dll) that is loaded via ctypes/libffi. It doesn't support subtitles, and the aspect ratio can't be changed (other than turned off).
+This engine uses Microsoft's [Media Foundation](https://learn.microsoft.com/en-us/windows/win32/medfound/microsoft-media-foundation-sdk) for playback, based on a small [wrapper .dll](https://github.com/59de44955ebd/python-mediafoundation/tree/main/dll) that is loaded via ctypes/libffi. 
+
+URLs are supported, but no HLS streams, subtitles are not supported, and the aspect ratio can't be changed (other than turned off).
 
 This engine supports less container formats and codecs than engines `directshow` or `vlc`, but has the benefit of minimum extra file size since `Media Foundation` is provided by the OS.
 
